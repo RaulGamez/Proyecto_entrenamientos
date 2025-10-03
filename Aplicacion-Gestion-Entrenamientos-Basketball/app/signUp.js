@@ -24,7 +24,16 @@ export default function SignUp() {
     const handleSignUp = async () => {
         setError("");
 
-        const hasErrors = Object.values(formatErrors).some((e) => e !== "");
+        const errors ={
+            username: validateUsername(username),
+            email: validateEmail(email),
+            phone: validatePhone(phone),
+            password: validatePassword(password),
+        };
+
+        setFormatErrors(errors);
+
+        const hasErrors = Object.values(errors).some((e) => e !== "");
         if (hasErrors) return;
 
         try {

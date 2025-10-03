@@ -7,7 +7,7 @@ export default function Index() {
     const router = useRouter();
 
     useEffect(() => {
-        //router.replace("/login"); // descomentar para acceder a la ventana Login
+        //router.replace("/login");     // descomentar y reiniciar para acceder a la ventana Login
     }, []);
 
     return <Main />;
