@@ -7,36 +7,36 @@ import { styles } from "./styles";
 export function Main() {
 	return (
 		<View style={styles.container}>
-			<ScrollView>
-				<Text style={styles.title}>Inicio</Text>
-				<Text style={styles.title}>HOOOLA</Text>
-				<Text style={styles.title}>HOOOLA</Text>
-				<Text style={styles.title}>HOOOLA</Text>
-				<Text style={styles.title}>HOOOLA</Text>
-				<Text style={styles.title}>HOOOLA</Text>
-				<Text style={styles.title}>HOOOLA</Text>
-				<Text style={styles.title}>HOOOLA</Text>
-				<Text style={styles.title}>HOOOLA Como estaaaaaaaaaaaaaaaan</Text>
-				<Text style={styles.title}>HOOOLA</Text>
-				<Text style={styles.title}>HOOOLA</Text>
-				<Text style={styles.title}>HOOOLA</Text>
-				<Text style={styles.title}>HOOOLA</Text>
-				<Text style={styles.title}>HOOOLA</Text>
-				<Text style={styles.title}>HOOOLA</Text>
-				<Text style={styles.title}>HOOOLA</Text>
-				<Text style={styles.title}>HOOOLA</Text>
-				<Text style={styles.title}>HOOOLA</Text>
-				<Text style={styles.title}>HOOOLA</Text>
-				<Text style={styles.title}>HOOOLA</Text>
-				<Text style={styles.title}>HOOOLA</Text>
-				<Text style={styles.title}>HOOOLA</Text>
-				<Text style={styles.title}>HOOOLA</Text>
-				<Text style={styles.title}>HOOOLA</Text>
-				<Text style={styles.title}>HOOOLA</Text>
-				<Text style={styles.title}>HOOOLA</Text>
-				<Text style={styles.title}>HOOOLA</Text>
-				<Text style={styles.title}>HOOOLA</Text>
-				<Text style={styles.title}>Final</Text>
+			<ScrollView> {/* Es mejor usar FlatList pero era para probar*/}
+				<Text style={styles.title}>INICIO SCROLL</Text>
+				<Text style={styles.title}>MAIN CON SCROLL</Text>
+				<Text style={styles.title}>MAIN CON SCROLL</Text>
+				<Text style={styles.title}>MAIN CON SCROLL</Text>
+				<Text style={styles.title}>MAIN CON SCROLL</Text>
+				<Text style={styles.title}>MAIN CON SCROLL</Text>
+				<Text style={styles.title}>MAIN CON SCROLL</Text>
+				<Text style={styles.title}>MAIN CON SCROLL</Text>
+				<Text style={styles.title}>MAIN CON SCROLL</Text>
+				<Text style={styles.title}>MAIN CON SCROLL</Text>
+				<Text style={styles.title}>MAIN CON SCROLL</Text>
+				<Text style={styles.title}>MAIN CON SCROLL</Text>
+				<Text style={styles.title}>MAIN CON SCROLL</Text>
+				<Text style={styles.title}>MAIN CON SCROLL</Text>
+				<Text style={styles.title}>MAIN CON SCROLL</Text>
+				<Text style={styles.title}>MAIN CON SCROLL</Text>
+				<Text style={styles.title}>MAIN CON SCROLL</Text>
+				<Text style={styles.title}>MAIN CON SCROLL</Text>
+				<Text style={styles.title}>MAIN CON SCROLL</Text>
+				<Text style={styles.title}>MAIN CON SCROLL</Text>
+				<Text style={styles.title}>MAIN CON SCROLL</Text>
+				<Text style={styles.title}>MAIN CON SCROLL</Text>
+				<Text style={styles.title}>MAIN CON SCROLL</Text>
+				<Text style={styles.title}>MAIN CON SCROLL</Text>
+				<Text style={styles.title}>MAIN CON SCROLL</Text>
+				<Text style={styles.title}>MAIN CON SCROLL</Text>
+				<Text style={styles.title}>MAIN CON SCROLL</Text>
+				<Text style={styles.title}>MAIN CON SCROLL</Text>
+				<Text style={styles.title}>FINAL SCROLL</Text>
 			</ScrollView>
 		</View>
 	);
