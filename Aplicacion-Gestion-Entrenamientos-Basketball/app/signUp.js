@@ -24,7 +24,7 @@ export default function SignUp() {
     const handleSignUp = async () => {
         setError("");
 
-        const errors ={
+        const errors = {
             username: validateUsername(username),
             email: validateEmail(email),
             phone: validatePhone(phone),
@@ -38,14 +38,58 @@ export default function SignUp() {
 
         try {
             setLoading(true);
-            const { error } = await supabase.auth.signUp({ email, password });
-            setLoading(false);
+
+            const { data: existingUser } = await supabase
+            .from("users")
+            .select("id")
+            .eq("username", username)
+            .maybeSingle();
+
+            if (existingUser) {
+                const suggestions = [
+                    `${username}_${Math.floor(Math.random() * 100)}`,
+                    `${username}${Math.floor(Math.random() * 1000)}`,
+                    `${username.slice(0, 8)}_${Math.floor(Math.random() * 9999)}`
+                ];
+                setFormatErrors((prev) => ({ ...prev, username: `El usuario ya existe. Prueba con: ${suggestions.join(", ")}` }));
+                setLoading(false);
+                return;
+            }
+
+            const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
+            if (signUpError) {
+                if (signUpError.message.includes("User already registered")) {
+                    setFormatErrors((prev) => ({ ...prev, email: "Este correo ya está registrado. Inicia sesión o usa otro correo." }));
+                    return;
+                }
+                else {
+                    setError(signUpError.message);
+                }
+                throw signUpError;
+            }
+
+            const user = data.user;
+            if (user) {
+                const { error: insertError } = await supabase.from("users").insert([{
+                        id: user.id,
+                        username: username,
+                        phone: phone || null, // opcional
+                    },]);
+
+                if (insertError) {
+                    setError(insertError.message);
+                    throw insertError;
+                }
+            }
 
             alert("Revisa tu correo para confirmar la cuenta");
             router.replace("/login");
         }
         catch {
-            setError(error.message);
+            return;
+        }
+        finally {
+            setLoading(false);
         }
     };
 
@@ -55,7 +99,7 @@ export default function SignUp() {
 
             {error ? <Text style={[styles.error, {width: 250}]}>{error}</Text> : null}
             {
-                false // true para mostrar
+                false // --> true para mostrar
                 && <Text style={[styles.error, {width: 250}]}>Hola esto es un texto de error de prueba y necesito hacerlo largo.</Text>
             }
 
@@ -65,13 +109,13 @@ export default function SignUp() {
             style={styles.input}
             value={username}
             onChangeText={(text) => {
+                setUsername(text);
                 const errorMsg = validateUsername(text);
                 if (errorMsg) {
                     setFormatErrors((prev) => ({ ...prev, username: errorMsg }));
                 } else {
                     setFormatErrors((prev) => ({ ...prev, username: "" }));
                 }
-                setUsername(text);
             }}
             autoCapitalize="none"
             autoCorrect={false}
@@ -105,13 +149,13 @@ export default function SignUp() {
             keyboardType="phone-pad"
             value={phone}
             onChangeText={(text) => {
+                setPhone(text);
                 const errorMsg = validatePhone(text);
                 if (errorMsg) {
                     setFormatErrors((prev) => ({ ...prev, phone: errorMsg }));
                 } else {
                     setFormatErrors((prev) => ({ ...prev, phone: "" }));
                 }
-                setPhone(text);
             }}
             />
             {formatErrors.phone ? <Text style={[styles.error, {width: 250}]}>{formatErrors.phone}</Text> : null}

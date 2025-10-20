@@ -1,10 +1,47 @@
 import { View, Text, TextInput, Pressable, KeyboardAvoidingView } from "react-native";
 import { styles } from "../components/styles";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
+import { useState } from "react";
+import { supabase } from "../lib/supabase";
 
 export default function Login() {
+    const router = useRouter();
+
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+
+    const handleLogin = async () => {
+        setError("");
+
+        setLoading(true);
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        setLoading(false);
+
+        if (error) {
+            if (error.message.includes("missing email or phone")) {
+                setError("El usuario no existe o la contraseña es incorrecta.");
+            }
+            else {
+                setError(error.message);
+            }
+            return;
+        }
+
+        router.replace("/");
+    };
+
     return (
         <KeyboardAvoidingView style={styles.container} behavior="padding">
+            <Text style={styles.title}>Inicia sesión</Text>
+
+            {error ? <Text style={[styles.error, {width: 250}]}>{error}</Text> : null}
+            {
+                false // --> true para mostrar
+                && <Text style={[styles.error, {width: 250}]}>Hola esto es un texto de error de prueba y necesito hacerlo largo.</Text>
+            }
+
             <TextInput
             placeholder="Teléfono, usuario o correo electrónico"
             placeholderTextColor="#999"
@@ -23,12 +60,16 @@ export default function Login() {
             secureTextEntry
             />
 
-            <Pressable style={({ pressed }) => [
+            <Pressable onPress={handleLogin}
+            disabled={loading}
+            style={({ pressed }) => [
             styles.lightButton,
             { width: 250, marginBottom: 20 },
-            pressed && { backgroundColor: "#8a4200" }
+            (pressed || loading) && { backgroundColor: "#8a4200" }
             ]}>
-                <Text style={styles.lightText}>Iniciar sesión</Text>
+                <Text style={styles.lightText}>
+                    {loading ? "Cargando..." : "Iniciar sesión"}
+                </Text>
             </Pressable>
 
             <Text style={styles.lightText}>¿No tienes una cuenta?</Text>

@@ -1,9 +1,8 @@
 import "react-native-url-polyfill/auto";
 import { Slot } from "expo-router";
-import { View, Text } from "react-native";
+import { View } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import { SafeAreaProvider } from "react-native-safe-area-context";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { styles } from "../components/styles";
 
 export default function Layout() {
