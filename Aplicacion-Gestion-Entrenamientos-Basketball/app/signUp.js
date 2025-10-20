@@ -74,6 +74,7 @@ export default function SignUp() {
                         id: user.id,
                         username: username,
                         phone: phone || null, // opcional
+                        email: email,
                     },]);
 
                 if (insertError) {

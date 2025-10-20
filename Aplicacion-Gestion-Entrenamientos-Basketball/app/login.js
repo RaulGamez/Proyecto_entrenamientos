@@ -16,7 +16,29 @@ export default function Login() {
         setError("");
 
         setLoading(true);
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+        let emailToUse = email; // lo que el usuario escribe
+
+        // Detectamos el tipo de entrada
+        if (!email.includes("@")) {
+            // si no hay arroba es username
+            const { data, error: userError } = await supabase
+                .from("users")
+                .select("email")
+                .eq("username", emailToUse)
+                .maybeSingle();
+
+            if (userError) throw userError;
+            if (!data) {
+                setError("Usuario no encontrado");
+                setLoading(false);
+                return;
+            }
+
+            emailToUse = data.email; // sustituimos por el correo real
+        }
+
+        const { data, error } = await supabase.auth.signInWithPassword({ email: emailToUse, password });
         setLoading(false);
 
         if (error) {
@@ -43,10 +65,12 @@ export default function Login() {
             }
 
             <TextInput
-            placeholder="Teléfono, usuario o correo electrónico"
+            placeholder="Correo electrónico"
             placeholderTextColor="#999"
             style={styles.input}
             keyboardType="email-address"
+            value={email}
+            onChangeText={setEmail}
             autoCapitalize="none"
             autoCorrect={false}
             />
@@ -55,6 +79,8 @@ export default function Login() {
             placeholder="Contraseña"
             placeholderTextColor="#999"
             style={styles.input}
+            value={password}
+            onChangeText={setPassword}
             autoCapitalize="none"
             autoCorrect={false}
             secureTextEntry
