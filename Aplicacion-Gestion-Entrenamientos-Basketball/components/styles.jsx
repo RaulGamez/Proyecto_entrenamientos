@@ -14,7 +14,7 @@ export const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: "bold",
         marginBottom: 10,
-        color: "#fff",
+        color: "#000",
     },
 
     input: {
@@ -62,7 +62,6 @@ export const styles = StyleSheet.create({
         paddingHorizontal: 0,
         paddingTop: 24,
         paddingBottom: 40,
-        backgroundColor: "#fff", // a juego con tu calendario actual
     },
 
     // Bloque informativo superior
@@ -227,4 +226,17 @@ export const styles = StyleSheet.create({
     modalSave: { backgroundColor: "#ff9531" },
     modalSaveText: { color: "#fff" },
     error: { color: "#c00", fontSize: 12 },
+
+    /////////////// TEAMS ///////////////
+    teamCard: {
+        flex: 1,
+        width: 370,
+        height: 90,
+        padding: 12,
+        backgroundColor: "#fff",
+        marginBottom: 10,
+        borderColor: "#ccc",
+        borderWidth: 1,
+        borderRadius: 12,
+    },
 });
