@@ -64,94 +64,165 @@ export const styles = StyleSheet.create({
         paddingBottom: 40,
     },
 
-    // Bloque informativo superior
-    infoBlock: {
+    // --- Bienvenida
+    welcomeCard: {
         backgroundColor: "#fff",
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: "#e6e6e6",
-        padding: 16,
+        borderRadius: 16,
+        padding: 14,
+        marginBottom: 12,
+        shadowColor: "#000",
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+        elevation: 2,
     },
-    infoTitle: {
-        fontSize: 20,
-        fontWeight: "700",
-        color: "#000",
-        marginBottom: 8,
-    },
-    infoParagraph: {
-        fontSize: 14,
-        lineHeight: 20,
-        color: "#333",
-    },
+    welcomeTitle: { fontSize: 16, fontWeight: "700", color: "#111" },
+    welcomeDate: { marginTop: 2, color: "#6b7280", fontSize: 12 },
 
-    // Espaciador grande antes del calendario
-    bigSpacer: {
-        height: 44,
+    // --- Secciones
+    sectionCard: {
+        backgroundColor: "#fff",
+        borderRadius: 16,
+        padding: 4,
+        marginBottom: 14,
     },
+    sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
+    sectionTitle: { fontSize: 14, fontWeight: "700", color: "#111" },
+    sectionCount: { fontSize: 12, fontWeight: "600", color: "#6b7280" },
+    primaryBtn: {
+        backgroundColor: "#ff9531",
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 10,
+    },
+    primaryBtnText: { color: "#fff", fontWeight: "700" },
 
-    // ---- CABECERA / NAV ----
-    topBar: {
-        width: SCREEN_WIDTH-25,
-        paddingHorizontal: 66,
-        paddingTop: 2,
-        paddingBottom: 0,
-    },
-    navRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        marginBottom: 0,
-    },
-    monthTitle: {
-        color: "#000",
-        fontSize: 18,
-        fontWeight: "700",
-        textTransform: "capitalize",
-    },
+    // --- Navegación mes
+    navRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
     navBtn: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: "#FFF",
-        alignItems: "center",
-        justifyContent: "center",
-        borderWidth: 1,
-        borderColor: "#FFF",
+        width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center",
+        backgroundColor: "#fff", borderWidth: 1, borderColor: "#e5e7eb",
     },
-    navBtnText: { color: "#000", fontSize: 18, fontWeight: "700" },
-    
+    navBtnText: { fontSize: 16, color: "#111" },
+    monthTitle: { fontWeight: "700", color: "#111", fontSize: 14 },
+
 
     // ---- CALENDARIO ----
     calendarCard: {
-        width: SCREEN_WIDTH - 25,
-        height: SCREEN_HEIGHT - 220,
+        width: SCREEN_WIDTH - 45,
+        height: SCREEN_HEIGHT - 420,
         borderRadius: 16,
         overflow: "hidden",
-        backgroundColor: "#0f0f0f",
+        backgroundColor: "#fff",
         borderWidth: 1,
         borderColor: "#1f1f1f",
-        alignSelf: "center",
         shadowColor: "#000",
-        shadowOpacity: 0.25,
-        shadowRadius: 12,
-        shadowOffset: { width: 0, height: 6 },
         elevation: 6,
     },
-    loaderBox: { flex: 1, alignItems: "center", justifyContent: "center" },
-    loaderText: { color: "#fff", marginTop: 8 },
 
     eventChip: {
-        marginHorizontal: 4,
-        marginVertical: 2,
-        paddingHorizontal: 6,
+        backgroundColor: "#fff3e7",
+        borderRadius: 8,
         paddingVertical: 3,
-        borderRadius: 6,
-        backgroundColor: "#8B5CF6",
+        paddingHorizontal: 6,
+        borderWidth: 1, borderColor: "#ffd2a8",
     },
-    eventText: { color: "#fff", fontSize: 11 },
-    eventTime: { fontWeight: "700" },
+    eventText: { fontSize: 10, color: "#111", fontWeight: "600" },
+    eventTime: { color: "#ff9531" },
+    calendarHeaderContainer: { backgroundColor: "#f6f6f6ff", borderBottomWidth: 0 },
+    calendarHeaderContent: { color: "#000" },
+    
+    // --- Agenda de hoy
+    agendaItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#f8fafc",
+        borderRadius: 12,
+        padding: 10,
+        borderWidth: 1, borderColor: "#eef2f7",
+        marginBottom: 8,
+    },
+    agendaIcon: {
+        width: 34, height: 34, borderRadius: 10, backgroundColor: "#fff",
+        alignItems: "center", justifyContent: "center", marginRight: 10,
+        borderWidth: 1, borderColor: "#e5e7eb",
+    },
+    agendaTitle: { fontWeight: "700", color: "#111", marginBottom: 2 },
+    agendaMeta: { color: "#6b7280", fontSize: 12 },
+    agendaRight: { marginLeft: 8 },
+    badgeLight: {
+        fontSize: 12,
+        color: "#2563eb",
+        backgroundColor: "#e8f0ff",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 999,
+        overflow: "hidden",
+        fontWeight: "700",
+    },
 
-    // ---- MODAL INTRODUCIR EVENTO EN DICCIONARIO ----
+    // --- Recordatorios
+    reminderItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#fff",
+        borderRadius: 12,
+        padding: 10,
+        borderWidth: 1, borderColor: "#e5e7eb",
+        marginBottom: 8,
+    },
+    reminderLeft: {
+        width: 48, height: 48, borderRadius: 12,
+        borderWidth: 1, borderColor: "#e5e7eb",
+        alignItems: "center", justifyContent: "center",
+        marginRight: 10, backgroundColor: "#f9fafb",
+    },
+    reminderDateNum: { fontWeight: "800", fontSize: 16, color: "#111", lineHeight: 18 },
+    reminderDateMon: { textTransform: "uppercase", fontSize: 10, color: "#6b7280" },
+    reminderTitle: { fontWeight: "700", color: "#111", marginBottom: 2 },
+    reminderMeta: { color: "#6b7280", fontSize: 12 },
+    reminderRight: { paddingLeft: 8 },
+    reminderAction: { fontSize: 16 },
+    badgeUrgent: {
+        color: "#fff",
+        backgroundColor: "#dc6a6aff",
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 12,
+        marginLeft: 6,
+        fontSize: 11,
+        fontWeight: "800",
+        textTransform: "capitalize",
+    },
+
+    // --- Tareas
+    taskItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#fff",
+        borderRadius: 12,
+        padding: 10,
+        borderWidth: 1, borderColor: "#e5e7eb",
+        marginBottom: 8,
+    },
+    checkbox: {
+        width: 22, height: 22, borderRadius: 6,
+        borderWidth: 2, borderColor: "#cbd5e1",
+        alignItems: "center", justifyContent: "center",
+        marginRight: 10, backgroundColor: "#fff",
+    },
+    checkboxOn: { backgroundColor: "#22c55e", borderColor: "#22c55e" },
+    checkboxTick: { color: "#fff", fontWeight: "800" },
+    taskText: { flex: 1, color: "#111", fontSize: 13 },
+    taskTextDone: { textDecorationLine: "line-through", color: "#6b7280" },
+    addTaskBtn: {
+        marginTop: 6, alignSelf: "flex-start",
+        backgroundColor: "#f3f4f6",
+        paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10,
+        borderWidth: 1, borderColor: "#e5e7eb",
+    },
+    addTaskText: { color: "#111", fontWeight: "700" },
+
+    // ---- MODAL INTRODUCIR EVENTO EN DICCIONARIO y TAREAS ----
     modalOverlay: {
         flex: 1,
         backgroundColor: "rgba(0,0,0,0.6)",
@@ -226,6 +297,16 @@ export const styles = StyleSheet.create({
     modalSave: { backgroundColor: "#ff9531" },
     modalSaveText: { color: "#fff" },
     error: { color: "#c00", fontSize: 12 },
+
+    // util
+    emptyText: { color: "#6b7280", fontSize: 12 },
+    cardShadow: {
+        shadowColor: "#000",
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 1,
+    },
+
 
     /////////////// TEAMS ///////////////
     teamCard: {
