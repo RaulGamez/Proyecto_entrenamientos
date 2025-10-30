@@ -50,6 +50,18 @@ export default function SignUp() {
                 throw new Error("Falta EXPO_PUBLIC_REGISTER_SECRET");
             }
 
+            // Registro en auth.users
+            const { data: userData, error } = await supabase.auth.signUp({
+                email,
+                password,
+            });
+
+            if (error) throw error;
+
+            const user = userData.user;
+            if (!user) throw new Error("No se devolvió el usuario al registrarse.");
+
+
             const resp = await fetch(
                 `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/register-user`,
                 {
@@ -59,7 +71,7 @@ export default function SignUp() {
                     "Authorization": `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`, // JWT válido
                     "x-register-secret": process.env.EXPO_PUBLIC_REGISTER_SECRET,          // tu secreto
                 },
-                body: JSON.stringify({ email, password, username, phone }),
+                body: JSON.stringify({ id: user.id, email, username, phone }),
                 }
             );
 
@@ -77,12 +89,14 @@ export default function SignUp() {
 
             Alert.alert("Cuenta creada", "Revisa tu correo para confirmar la cuenta");
             router.replace("/login");
-            } catch (err) {
-                console.error("SignUp error:", err);
-                setError(err?.message || "Error inesperado al registrar el usuario");
-            } finally {
-                setLoading(false);
-            }
+
+        } catch (err) {
+            console.error("SignUp error:", err);
+            setError(err?.message || "Error inesperado al registrar el usuario");
+
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
