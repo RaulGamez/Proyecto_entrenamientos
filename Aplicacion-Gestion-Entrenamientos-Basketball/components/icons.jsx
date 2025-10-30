@@ -15,3 +15,7 @@ export const TeamIcon = (props) => (
 export const PlusIcon = (props) => (
     <Foundation name="plus" size={24} color="black" {... props}/>
 );
+
+export const LockIcon = (props) => (
+    <Foundation name="lock" size={24} color="black" {... props}/>
+);

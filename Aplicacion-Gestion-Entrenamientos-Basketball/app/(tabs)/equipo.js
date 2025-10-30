@@ -51,7 +51,7 @@ export default function Teams() {
             <Stack.Screen
             options={{
                 headerStyle: { backgroundColor: "#fff" },
-                headerTintColor:"#00",
+                headerTintColor:"#000",
                 headerTitle: "Equipos",
                 headerRight: () => (
                     <Pressable

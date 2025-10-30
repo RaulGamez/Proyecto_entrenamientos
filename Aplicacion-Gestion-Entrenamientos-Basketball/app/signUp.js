@@ -1,4 +1,4 @@
-import { View, Text, TextInput, KeyboardAvoidingView, Pressable } from "react-native";
+import { View, Text, TextInput, KeyboardAvoidingView, Pressable, Alert } from "react-native";
 import { Link, useRouter } from "expo-router";
 import { styles } from "../components/styles";
 import { useState } from "react";
@@ -39,59 +39,50 @@ export default function SignUp() {
         try {
             setLoading(true);
 
-            const { data: existingUser } = await supabase
-            .from("users")
-            .select("id")
-            .eq("username", username)
-            .maybeSingle();
+            // Validación de variables necesarias (evita 401 por JWT inválido)
+            if (!process.env.EXPO_PUBLIC_SUPABASE_URL) {
+                throw new Error("Falta EXPO_PUBLIC_SUPABASE_URL");
+            }
+            if (!process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY) {
+                throw new Error("Falta EXPO_PUBLIC_SUPABASE_ANON_KEY");
+            }
+            if (!process.env.EXPO_PUBLIC_REGISTER_SECRET) {
+                throw new Error("Falta EXPO_PUBLIC_REGISTER_SECRET");
+            }
 
-            if (existingUser) {
-                const suggestions = [
-                    `${username}_${Math.floor(Math.random() * 100)}`,
-                    `${username}${Math.floor(Math.random() * 1000)}`,
-                    `${username.slice(0, 8)}_${Math.floor(Math.random() * 9999)}`
-                ];
-                setFormatErrors((prev) => ({ ...prev, username: `El usuario ya existe. Prueba con: ${suggestions.join(", ")}` }));
-                setLoading(false);
+            const resp = await fetch(
+                `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/register-user`,
+                {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`, // JWT válido
+                    "x-register-secret": process.env.EXPO_PUBLIC_REGISTER_SECRET,          // tu secreto
+                },
+                body: JSON.stringify({ email, password, username, phone }),
+                }
+            );
+
+            // Leer como texto SIEMPRE y luego intentar parsear JSON
+            const raw = await resp.text();
+            let data = null;
+            try { data = raw ? JSON.parse(raw) : null; } catch (_) {}
+
+            if (!resp.ok) {
+                // Mensaje de error claro, usando JSON si existe o el texto crudo
+                const msg = (data && (data.error || data.message)) || raw || `Error ${resp.status}`;
+                setError(msg.trim());
                 return;
             }
 
-            const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
-            if (signUpError) {
-                if (signUpError.message.includes("User already registered")) {
-                    setFormatErrors((prev) => ({ ...prev, email: "Este correo ya está registrado. Inicia sesión o usa otro correo." }));
-                    return;
-                }
-                else {
-                    setError(signUpError.message);
-                }
-                throw signUpError;
-            }
-
-            const user = data.user;
-            if (user) {
-                const { error: insertError } = await supabase.from("users").insert([{
-                        id: user.id,
-                        username: username,
-                        phone: phone || null, // opcional
-                        email: email,
-                    },]);
-
-                if (insertError) {
-                    setError(insertError.message);
-                    throw insertError;
-                }
-            }
-
-            alert("Revisa tu correo para confirmar la cuenta");
+            Alert.alert("Cuenta creada", "Revisa tu correo para confirmar la cuenta");
             router.replace("/login");
-        }
-        catch {
-            return;
-        }
-        finally {
-            setLoading(false);
-        }
+            } catch (err) {
+                console.error("SignUp error:", err);
+                setError(err?.message || "Error inesperado al registrar el usuario");
+            } finally {
+                setLoading(false);
+            }
     };
 
     return (
@@ -112,11 +103,7 @@ export default function SignUp() {
             onChangeText={(text) => {
                 setUsername(text);
                 const errorMsg = validateUsername(text);
-                if (errorMsg) {
-                    setFormatErrors((prev) => ({ ...prev, username: errorMsg }));
-                } else {
-                    setFormatErrors((prev) => ({ ...prev, username: "" }));
-                }
+                setFormatErrors((prev) => ({ ...prev, username: errorMsg || ""}));
             }}
             autoCapitalize="none"
             autoCorrect={false}
@@ -132,34 +119,12 @@ export default function SignUp() {
             onChangeText={(text) => {
                 setEmail(text);
                 const errorMsg = validateEmail(text);
-                if (errorMsg) {
-                    setFormatErrors((prev) => ({ ...prev, email: errorMsg }));
-                } else {
-                    setFormatErrors((prev) => ({ ...prev, email: "" }));
-                }
+                setFormatErrors((prev) => ({ ...prev, email: errorMsg || ""}));
             }}
             autoCapitalize="none"
             autoCorrect={false}
             />
             {formatErrors.email ? <Text style={[styles.error, {width: 250}]}>{formatErrors.email}</Text> : null}
-
-            <TextInput
-            placeholder="Teléfono"
-            placeholderTextColor="#999"
-            style={styles.input}
-            keyboardType="phone-pad"
-            value={phone}
-            onChangeText={(text) => {
-                setPhone(text);
-                const errorMsg = validatePhone(text);
-                if (errorMsg) {
-                    setFormatErrors((prev) => ({ ...prev, phone: errorMsg }));
-                } else {
-                    setFormatErrors((prev) => ({ ...prev, phone: "" }));
-                }
-            }}
-            />
-            {formatErrors.phone ? <Text style={[styles.error, {width: 250}]}>{formatErrors.phone}</Text> : null}
 
             <TextInput
             placeholder="Contraseña"
@@ -169,18 +134,13 @@ export default function SignUp() {
             onChangeText={(text) => {
                 setPassword(text);
                 const errorMsg = validatePassword(text);
-                if (errorMsg) {
-                    setFormatErrors((prev) => ({ ...prev, password: errorMsg }));
-                } else {
-                    setFormatErrors((prev) => ({ ...prev, password: "" }));
-                }
+                setFormatErrors((prev) => ({ ...prev, password: errorMsg || ""}));
             }}
             autoCapitalize="none"
             autoCorrect={false}
             secureTextEntry
             />
             {formatErrors.password ? <Text style={[styles.error, {width: 250}]}>{formatErrors.password}</Text> : null}
-
 
             <Pressable
             onPress={handleSignUp}
@@ -191,7 +151,7 @@ export default function SignUp() {
             (pressed || loading) && { backgroundColor: "#8a4200" }
             ]}>
                 <Text style={styles.lightText}>
-                    {loading ? "Cargando..." : "Siguiente"}
+                    {loading ? "Cargando..." : "Crear cuenta"}
                 </Text>
             </Pressable>
 

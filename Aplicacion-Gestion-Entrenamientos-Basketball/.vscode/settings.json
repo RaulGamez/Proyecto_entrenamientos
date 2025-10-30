@@ -1,3 +1,4 @@
 {
-    "cmake.sourceDirectory": "C:/Users/PaulaSanjuan/Desktop/CURSO/FBCV/Proyecto_entrenamientos/Aplicacion-Gestion-Entrenamientos-Basketball/node_modules/expo-modules-core/android"
+    "cmake.sourceDirectory": "C:/Users/PaulaSanjuan/Desktop/CURSO/FBCV/Proyecto_entrenamientos/Aplicacion-Gestion-Entrenamientos-Basketball/node_modules/expo-modules-core/android",
+    "deno.enable": true
 }
