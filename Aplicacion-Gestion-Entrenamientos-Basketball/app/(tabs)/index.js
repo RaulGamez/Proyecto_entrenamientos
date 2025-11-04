@@ -10,11 +10,11 @@ export default function Index() {
 
     useEffect(() => {
         if (!loading && !user) {
-            //router.replace("/login");
+            router.replace("/login");
         }
     }, [loading, user]);
 
-    /*
+
     if (loading || !user) { // Si aun esta cargando o no ha encontrado sesion muestra el icono de cargando hasta que redirija la pantalla
         return (
             <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
@@ -22,7 +22,7 @@ export default function Index() {
             </View>
         );
     }
-        */
+
 
     // Si hay sesion renderiza el Main
     return <Main />;

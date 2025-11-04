@@ -12,7 +12,7 @@ export default function Pizarra() {
     const snapPoints = ["50%"];
 
     const handleLogout = async () => {
-        const { error } = await supabase.auth.signOut();
+        const { error } = await supabase.auth.signOut({ scope: "global" });
 
         if (error) {
             console.error("Error al cerrar sesion: ", error.message);
