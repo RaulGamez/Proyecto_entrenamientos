@@ -307,17 +307,4 @@ export const styles = StyleSheet.create({
         elevation: 1,
     },
 
-
-    /////////////// TEAMS ///////////////
-    teamCard: {
-        flex: 1,
-        width: 370,
-        height: 90,
-        padding: 12,
-        backgroundColor: "#fff",
-        marginBottom: 10,
-        borderColor: "#ccc",
-        borderWidth: 1,
-        borderRadius: 12,
-    },
 });

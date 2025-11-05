@@ -1,93 +1,165 @@
+// components/TeamsCreator.jsx
+// Componente para crear un nuevo equipo
 import { useState } from "react";
-import { View, Text, Pressable, TextInput } from "react-native";
+import { View, Text, Pressable, TextInput, ActivityIndicator, ScrollView, StyleSheet} from "react-native";
+import Slider from "@react-native-community/slider";
 import { supabase } from "../lib/supabase";
 import { useUser } from "../contexts/UserContexts";
-import { styles } from "./styles";
-import { validateUsername } from "../lib/validators";
+import { teamStyles as styles } from "./stylesTeams";
+import { TrainingSchedulePicker } from "./TrainingSchedulePicker";
+
 
 export function TeamsCreator({ onClose, onCreated }) {
-    const { user, loading } = useUser();
-    const [saveLoading, setSaveLoading] = useState(false);
-    const [error, setError] = useState("");
-    const [name, setName] = useState("");
+  const { user, loading } = useUser();
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [error, setError] = useState("");
+  
+  // Campos del formulario
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("");
+  const [playersTarget, setPlayersTarget] = useState("12");
+  const [trainingDays, setTrainingDays] = useState("");
+  const [schedule, setSchedule] = useState(null);
 
-    if (loading) {
-        return (
-            <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-                <ActivityIndicator size="large" color="#000" />
-            </View>
-        );
+  // Sliders (0-100)
+  const [bote, setBote] = useState(50);
+  const [tiro, setTiro] = useState(50);
+  const [pase, setPase] = useState(50);
+  const [defensa, setDefensa] = useState(50);
+  const [competicion, setCompeticion] = useState(50);
+  const [dinamico, setDinamico] = useState(50);
 
-    }
+  const round5 = (v) => Math.max(0, Math.min(100, Math.round(v / 5) * 5));
 
-    const handleSaveTeam = async () => {
-        setError("");
-        setSaveLoading(true);
 
-        const { data: teamData, error: insertError } = await supabase
+  const valid = name.trim().length >= 3;
+
+  if (loading) {
+      return (
+      <View style={{ padding: 24, alignItems: "center" }}>
+          <ActivityIndicator size="large" />
+      </View>
+      );
+  }
+
+  const handleSaveTeam = async () => {
+    try {
+      setError("");
+      setSaveLoading(true);
+
+      // función que redondea a múltiplos de 5
+      const round5 = (v) => Math.max(0, Math.min(100, Math.round(v / 5) * 5));
+
+      // preparamos los datos antes de insertar
+      const payload = {
+        name: name.trim(),
+        category: category.trim() || null,
+        players_target: playersTarget === "" ? null : Number(playersTarget),
+        training_days: schedule,
+        goals: {
+          bote: round5(bote),
+          tiro: round5(tiro),
+          pase: round5(pase),
+          defensa: round5(defensa),
+          competicion: round5(competicion),
+          dinamico: round5(dinamico),
+        },
+        created_by: user?.id,
+      };
+
+      // insertamos en Supabase
+      const { data, error: insertError } = await supabase
         .from("teams")
-        .insert([{
-            name: name,
-            created_by: user?.id,
-        },])
-        .select("id"); // Recuperamos el id
+        .insert([payload])
+        .select("id");
 
-        if (insertError) {
-            setError(insertError.message);
-            setSaveLoading(false);
-            return;
-        }
+      if (insertError) throw insertError;
 
-        const teamId = teamData?.[0]?.id;
+      const teamId = data?.[0]?.id;
 
-        const { error: relationError } = await supabase
+      // añade la relación usuario-equipo
+      const { error: relationError } = await supabase
         .from("users_teams")
-        .insert([{
-            user_id: user.id,
-            team_id: teamId,
-        },])
+        .insert([{ user_id: user.id, team_id: teamId }]);
 
-        setSaveLoading(false);
+      if (relationError) throw relationError;
 
-        if (relationError) {
-            setError(relationError.message);
-            return;
-        }
+      onCreated && (await onCreated());
+      onClose && (await onClose());
+    } catch (e) {
+      setError(e?.message ?? "Error guardando equipo");
+    } finally {
+      setSaveLoading(false);
+    }
+  };
 
-        if (onCreated) await onCreated();
-        if (onClose) await onClose();
-    };
+  const SliderRow = ({ label, value, onChange }) => (
+    <View style={styles.sliderRow}>
+      <View style={styles.sliderHeader}>
+        <Text style={styles.label}>{label}</Text>
+        <Text style={styles.rangeText}>{Math.round(value)}</Text>
+      </View>
+      <Slider minimumValue={0} maximumValue={100} step={5} value={value} onValueChange={(v) => onChange(v)} onSlidingComplete={(v) => onChange(round5(v))}/>
+    </View>
+  );
 
 
-    return (
-        <View>
-            <TextInput
-            placeholder="Nombre del equipo"
-            placeholderTextColor="#999"
-            style={styles.input}
-            value={name}
-            onChangeText={(text) => {
-                setName(text);
-                const errorMsg = validateUsername(text);
-                setError(errorMsg || "");
-            }}
-            autoCapitalize="none"
-            autoCorrect={false}
-            />
-            {error ? <Text style={[styles.error, {width: 250}]}>{error}</Text> : null}
+  return (
+    <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
+      <Text style={styles.modalTitle}>Crear Nuevo Equipo</Text>
+      <Text style={styles.modalSubtitle}>Define los detalles y objetivos de tu nuevo equipo</Text>
 
-            <Pressable
-            onPress={handleSaveTeam}
-            disabled={saveLoading || !name || !!error}
-            style={({ pressed }) => [
-            styles.lightButton,
-            { width: 250, marginBottom: 20 },
-            (pressed || saveLoading) && { backgroundColor: "#8a4200" }
-            ]}>
-                <Text style={styles.lightText}>
-                    {saveLoading ? "Cargando..." : "Crear equipo"}
-                </Text>
-            </Pressable>
-        </View>
-    );
+      <TextInput
+        placeholder="Nombre del Equipo (ej. Cadete Femenino A)"
+        placeholderTextColor="#9ca3af"
+        style={styles.input}
+        value={name}
+        onChangeText={setName}
+      />
+
+      <TextInput
+        placeholder="Categoría (ej. 1 zonal, Preferente...)"
+        placeholderTextColor="#9ca3af"
+        style={styles.input}
+        value={category}
+        onChangeText={setCategory}
+      />
+
+      <TextInput
+        placeholder="Número de Jugadores (ej. 12)"
+        placeholderTextColor="#9ca3af"
+        style={styles.input}
+        keyboardType="number-pad"
+        value={playersTarget}
+        onChangeText={setPlayersTarget}
+      />
+
+      <TrainingSchedulePicker value={schedule} onChange={setSchedule} />
+
+
+      <Text style={styles.sectionHeaderText}>Objetivos de Entrenamiento (0-100)</Text>
+
+      <SliderRow label="Bote" value={bote} onChange={setBote} />
+      <SliderRow label="Tiro" value={tiro} onChange={setTiro} />
+      <SliderRow label="Pase" value={pase} onChange={setPase} />
+      <SliderRow label="Defensa" value={defensa} onChange={setDefensa} />
+      <SliderRow label="Competición" value={competicion} onChange={setCompeticion} />
+      <SliderRow label="Dinámico" value={dinamico} onChange={setDinamico} />
+
+      {!!error && <Text style={styles.errorText}>{error}</Text>}
+
+      <View style={{ flexDirection: "row", gap: 10, marginTop: 6 }}>
+        <Pressable style={[styles.lightButton, { flex: 1 }]} onPress={onClose} disabled={saveLoading}>
+          <Text style={styles.lightText}>Cancelar</Text>
+        </Pressable>
+        <Pressable
+          onPress={handleSaveTeam}
+          disabled={saveLoading || !valid}
+          style={[styles.darkButton, { flex: 1, opacity: saveLoading || !valid ? 0.6 : 1 }]}
+        >
+          <Text style={styles.darkText}>{saveLoading ? "Creando..." : "Crear Equipo"}</Text>
+        </Pressable>
+      </View>
+    </ScrollView>
+  );
 }

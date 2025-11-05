@@ -2,35 +2,35 @@ import { supabase } from "./supabase";
 
 // Obtener equipos del usuario autenticado y participantes
 export async function getUserTeams() {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) throw userError || new Error("Usuario no autenticado");
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) throw userError || new Error("Usuario no autenticado");
 
-    const { data, error } = await supabase
+  const { data, error } = await supabase
     .from("users_teams")
     .select(`
-        user_id,
-        team_id,
-        teams (
-            id,
-            name,
-            created_at,
-            created_by,
-            creator:created_by ( username ),
-            users_teams (
-                user_id,
-                users ( username )
-            )
-        )
+      team_id,
+      teams (
+        id,
+        name,
+        category,
+        players_target,
+        training_days,
+        cover_url,
+        goals,
+        created_at,
+        created_by,
+        creator:created_by ( username )
+      )
     `)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .order("created_at", { foreignTable: "teams", ascending: false });
 
-    if (error) {
-        console.log("Error" + error.message);
-        throw error;
-    }
+  if (error) {
+    console.error("Error al cargar equipos:", error.message);
+    throw error;
+  }
 
-    console.log("Resultado de Supabase:", data);
-    return data.map(d => d.teams);
+  return (data || []).map((d) => d.teams);
 }
 
 // Crear nuevo equipo
@@ -97,4 +97,16 @@ export async function deleteTeam(teamId) {
     if (teamError) throw teamError;
 
     return true;
+}
+
+export async function getUserPlayers() {
+  const { data, error } = await supabase
+    .from("players")
+    .select("id, name, number, role, age, height, status, team_id")
+    .order("name", { ascending: true });
+  if (error) {
+    console.warn("getUserPlayers", error);
+    return [];
+  }
+  return data || [];
 }
