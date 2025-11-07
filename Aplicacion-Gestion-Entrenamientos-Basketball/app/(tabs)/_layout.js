@@ -1,6 +1,6 @@
 import { Tabs } from "expo-router";
 import { View } from "react-native";
-import { BoardIcon, HomeIcon, TeamIcon } from "../../components/icons";
+import { BoardIcon, HomeIcon, TeamIcon, TrainingIcon } from "../../components/icons";
 
 export default function TabsLayout() {
     return (
@@ -9,6 +9,13 @@ export default function TabsLayout() {
             headerShown: true, // titulo en la parte superior
             tabBarShowLabel: false, // textos debajo de los iconos de la barra inferior
         }}>
+            <Tabs.Screen
+            name="entrenamientos"
+            options={{
+                title: "Entrenamientos",
+                tabBarIcon: ({color}) => <TrainingIcon color={color}/>
+            }}/>
+
             <Tabs.Screen
             name="index"
             options={{

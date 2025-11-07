@@ -6,7 +6,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { supabase } from "../../lib/supabase";
 import { teamStyles as styles } from "../../components/stylesTeams";
 import { ProgressBar } from "../../components/ProgressBar";
-import { Close } from "../../components/icons";
+import { CloseIcon } from "../../components/icons";
 
 export default function TeamDetail() {
   const { id } = useLocalSearchParams();
@@ -213,7 +213,7 @@ export default function TeamDetail() {
             alignItems: "center",
           }}
         >
-          <Close color="#fff" size={20} />
+          <CloseIcon color="#fff" size={20} />
         </Pressable>
       </View>
 
