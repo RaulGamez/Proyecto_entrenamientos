@@ -8,18 +8,8 @@ import { teamStyles as tstyles } from "../../components/stylesTeams";
 import { TeamCard } from "../../components/TeamCard";
 import { TeamsCreator } from "../../components/TeamsCreator";
 import { getUserTeams, getUserPlayers } from "../../lib/queries";
-import { PlayersCreator } from "../../components/PlayersCreator";
-
-/* ---------- Helpers puros (no dependen de teams) ---------- */
-function roleLabel(role) {
-  const map = { "1": "Base", "2": "Escolta", "3": "Alero", "4": "Ala-Pívot", "5": "Pívot" };
-  if (role == null || role === "") return null;
-  return map[String(role)] || String(role);
-}
-function statusChipText(status) {
-  if (!status) return "";
-  return status.toLowerCase() === "active" ? "Activo" : status;
-}
+import { PlayerCreator } from "../../components/PlayerCreator";
+import { PlayerCard } from "../../components/PlayerCard";
 
 export default function Teams() {
   const router = useRouter();
@@ -66,50 +56,10 @@ export default function Teams() {
     return m;
   }, [teams]);
 
-  // Helpers que sí usan teamNameById (defínelos dentro del componente)
-  function formatPlayerMeta(p) {
-    const parts = [];
-    const role = roleLabel(p.role);
-    if (role) parts.push(role);
-    if (p.age !== null && p.age !== undefined && String(p.age) !== "") parts.push(`${p.age} años`);
-    if (p.height) parts.push(p.height);
-    if (p.team_id) parts.push(teamNameById[p.team_id] ?? "Sin Equipo");
-    else parts.push("Sin Equipo");
-    return parts.length ? parts.join(" • ") : "Sin posición";
-  }
-
-  // Card/row de jugador (dentro para acceder a helpers y teamNameById)
-  const PlayerRow = ({ player, onPress }) => (
-    <Pressable onPress={onPress} style={tstyles.playerRow}>
-      <View style={{ flex: 1 }}>
-        <Text style={{ fontWeight: "600" }}>
-          {player.number ? `#${player.number} ` : ""}{player.name}
-        </Text>
-        <Text style={{ color: "#6b7280", marginTop: 2 }}>
-          {formatPlayerMeta(player)}
-        </Text>
-      </View>
-      {!!player.status && (
-        <Text
-          style={{
-            paddingHorizontal: 10,
-            paddingVertical: 4,
-            borderRadius: 999,
-            backgroundColor: "#dcfce7",
-            color: "#166534",
-            fontWeight: "600",
-          }}
-        >
-          {statusChipText(player.status)}
-        </Text>
-      )}
-    </Pressable>
-  );
-
   const openTeamsCreator = () => bsTeamsRef.current?.expand();
   const closeTeamsCreator = () => bsTeamsRef.current?.close();
-  const openPlayersCreator = () => bsPlayersRef.current?.expand();
-  const closePlayersCreator = () => bsPlayersRef.current?.close();
+  const openPlayerCreator = () => bsPlayersRef.current?.expand();
+  const closePlayerCreator = () => bsPlayersRef.current?.close();
 
   return (
     <View style={tstyles.screen}>
@@ -145,7 +95,7 @@ export default function Teams() {
               </Text>
 
               <View style={tstyles.headerActions}>
-                <Pressable style={tstyles.chip} onPress={openPlayersCreator}>
+                <Pressable style={tstyles.chip} onPress={openPlayerCreator}>
                   <Text style={tstyles.chipText}>+ Jugador</Text>
                 </Pressable>
                 <Pressable style={[tstyles.chip, tstyles.chipDark]} onPress={openTeamsCreator}>
@@ -166,7 +116,7 @@ export default function Teams() {
                 </Text>
               ) : (
                 players.map((p) => (
-                  <PlayerRow
+                  <PlayerCard
                     key={p.id}
                     player={p}
                     onPress={() => router.push(`../team/players/${p.id}`)}
@@ -204,15 +154,15 @@ export default function Teams() {
         snapPoints={snapPoints}
         index={-1}
         enablePanDownToClose
-        onClose={closePlayersCreator}
+        onClose={closePlayerCreator}
       >
         <BottomSheetScrollView contentContainerStyle={{ paddingBottom: 24 }}>
-          <PlayersCreator
+          <PlayerCreator
             teams={teams}
-            onClose={closePlayersCreator}
+            onClose={closePlayerCreator}
             onCreated={async () => {
               await loadPlayers();   // refresca la lista
-              closePlayersCreator(); // cierra el sheet
+              closePlayerCreator(); // cierra el sheet
             }}
           />
         </BottomSheetScrollView>

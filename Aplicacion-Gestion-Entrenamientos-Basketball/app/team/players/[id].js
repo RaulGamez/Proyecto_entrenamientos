@@ -10,6 +10,14 @@ export default function EditPlayer() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [player, setPlayer] = useState(null);
+  const [formatErrors, setFormatErrors] = useState({
+    name: "",
+    number: "",
+    age: "",
+    role: "",
+    height: "",
+    status: ""
+  });
 
   useEffect(() => {
     (async () => {
@@ -33,6 +41,12 @@ export default function EditPlayer() {
   }, [id]);
 
   const save = async () => {
+    setFormatErrors(validatePlayerinfo(player));
+    const hasErrors = Object.values(formatErrors).some(msg => msg !== "");
+    if (hasErrors) return;
+
+    setLoading(true);
+
     try {
       const { error } = await supabase
         .from("players")
@@ -46,7 +60,10 @@ export default function EditPlayer() {
         })
         .eq("id", id);
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+        return;
+      }
       router.back();
     } catch (e) {
       Alert.alert("Error", e.message || String(e));
@@ -94,12 +111,12 @@ export default function EditPlayer() {
           />
         </View>
         <View style={{ flex: 1 }}>
-          <Label>Edad</Label>
+          <Label>Año de nacimiento</Label>
           <Input
             keyboardType="numeric"
             value={String(player.age ?? "")}
             onChangeText={(t) => setPlayer((p) => ({ ...p, age: t }))}
-            placeholder="0"
+            placeholder="2009"
           />
         </View>
       </View>
@@ -107,8 +124,8 @@ export default function EditPlayer() {
       <Label>Posición</Label>
       <Input value={player.role} onChangeText={(t) => setPlayer((p) => ({ ...p, role: t }))} placeholder="Base / Escolta…" />
 
-      <Label>Altura</Label>
-      <Input value={player.height} onChangeText={(t) => setPlayer((p) => ({ ...p, height: t }))} placeholder="1.85m" />
+      <Label>Altura (cm)</Label>
+      <Input value={player.height} onChangeText={(t) => setPlayer((p) => ({ ...p, height: t }))} placeholder="185" />
 
       <Label>Estado</Label>
       <Input value={player.status} onChangeText={(t) => setPlayer((p) => ({ ...p, status: t }))} placeholder="active | inactive | injured" />
