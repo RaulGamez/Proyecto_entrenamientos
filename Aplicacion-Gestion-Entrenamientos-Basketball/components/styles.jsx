@@ -33,15 +33,29 @@ export const styles = StyleSheet.create({
     },
 
     lightButton: {
-        backgroundColor: "#ac5300",
+        backgroundColor: "#da7e29ff",
         marginTop: 10,
-        borderRadius: 5,
-        padding: 10,
+        borderRadius: 7,
+        padding: 12,
         alignItems: "center",
         justifyContent: "center",
     },
 
     lightText: {
+        color: "#fff",
+        fontSize: 12,
+    },
+
+    darkButton: {
+        backgroundColor: "#4a4848ff",
+        marginTop: 10,
+        borderRadius: 7,
+        padding: 12,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+
+    darkText: {
         color: "#fff",
         fontSize: 12,
     },
