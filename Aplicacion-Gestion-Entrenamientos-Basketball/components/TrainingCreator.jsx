@@ -33,6 +33,13 @@ export function TrainingCreator({ onClose, onCreated, onGoToExercisesTab }) {
   const [courtValue, setCourtValue] = useState(null);
   const [courtLabel, setCourtLabel] = useState("");
 
+  // --- ejercicios seleccionables ---
+  const [exercisePickerOpen, setExercisePickerOpen] = useState(false);
+  const [allExercises, setAllExercises] = useState([]);
+  const [loadingExercises, setLoadingExercises] = useState(false);
+  const [selectedExerciseIds, setSelectedExerciseIds] = useState([]);
+  const [selectedExercises, setSelectedExercises] = useState([]);
+
   // cargar equipos de Supabase
   useEffect(() => {
     const fetchTeams = async () => {
@@ -43,6 +50,36 @@ export function TrainingCreator({ onClose, onCreated, onGoToExercisesTab }) {
     };
     fetchTeams();
   }, []);
+
+  const loadExercises = async () => {
+    setLoadingExercises(true);
+    const { data, error } = await supabase
+      .from("exercises")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      setAllExercises(data);
+    }
+    setLoadingExercises(false);
+  };
+
+  const openExercisePicker = async () => {
+    if (allExercises.length === 0) {
+      await loadExercises();
+    }
+    setExercisePickerOpen(true);
+  };
+
+  const closeExercisePicker = () => {
+    setExercisePickerOpen(false);
+  };
+
+  const toggleExercise = (id) => {
+    setSelectedExerciseIds((prev) =>
+      prev.includes(id) ? prev.filter((e) => e !== id) : [...prev, id]
+    );
+  };
 
   const handleCreateTraining = async () => {
     setError("");
@@ -65,7 +102,7 @@ export function TrainingCreator({ onClose, onCreated, onGoToExercisesTab }) {
         players: isNaN(playersNum) ? null : playersNum,
         court: courtValue || null,
         description: description.trim() || null, // OJO: columna con typo
-        exercices: null,                          // de momento vacío
+        exercices: selectedExerciseIds.length > 0 ? selectedExerciseIds : null,                          // de momento vacío
         created_by: user?.id || null,
       };
 
@@ -86,11 +123,153 @@ export function TrainingCreator({ onClose, onCreated, onGoToExercisesTab }) {
     }
   };
 
+  if (loading) {
+    return (
+      <View style={{ padding: 24, alignItems: "center" }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
   const teamOptions = [
     { value: "none", label: "Sin equipo" },
     ...teams.map((t) => ({ value: t.id, label: t.name })),
   ];
 
+   // ----- MODO PICKER DE EJERCICIOS -----
+  if (exercisePickerOpen) {
+    return (
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
+        <Text style={baseStyles.sectionTitle}>Seleccionar ejercicios</Text>
+        <Text style={{ color: "#111827", fontSize: 13, marginBottom: 8 }}>
+          Seleccionados: {selectedExerciseIds.length}
+        </Text>
+
+        {loadingExercises ? (
+          <ActivityIndicator style={{ marginTop: 16 }} />
+        ) : allExercises.length === 0 ? (
+          <View style={{ marginTop: 12 }}>
+            <Text style={{ color: "#4b5563", fontSize: 13 }}>
+              Aún no has creado ningún ejercicio.
+            </Text>
+            {onGoToExercisesTab ? (
+              <Pressable
+                style={[baseStyles.darkButton, { marginTop: 10 }]}
+                onPress={onGoToExercisesTab}
+              >
+                <Text style={baseStyles.darkText}>
+                  Ir a “Mis Ejercicios”
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : (
+          allExercises.map((item) => {
+            const selected = selectedExerciseIds.includes(item.id);
+            const durationLabel = item.duration
+              ? `${item.duration} min`
+              : "-";
+            const playersLabel =
+              item.players != null && item.players !== ""
+                ? String(item.players)
+                : "-";
+            const courtLabel = item.court
+              ? {
+                  full: "Pista completa",
+                  half: "Media pista",
+                  quarter: "1/4 pista",
+                  none: "Sin pista",
+                }[item.court] || item.court
+              : "Sin pista";
+            const typeLabel = item.type || "Ejercicio";
+
+            return (
+              <Pressable
+                key={item.id}
+                onPress={() => toggleExercise(item.id)}
+                style={[
+                  pickerStyles.card,
+                  selected && pickerStyles.cardSelected,
+                ]}
+              >
+                <View
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingTop: 10,
+                    paddingBottom: 6,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 15,
+                      fontWeight: "700",
+                      color: "#111827",
+                    }}
+                  >
+                    {item.name}
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      color: "#6b7280",
+                    }}
+                  >
+                    {typeLabel}
+                  </Text>
+                </View>
+
+                <View style={pickerStyles.statsRow}>
+                  <View style={pickerStyles.statCard}>
+                    <Text style={pickerStyles.statLabel}>Duración</Text>
+                    <Text style={pickerStyles.statValue}>
+                      {durationLabel}
+                    </Text>
+                  </View>
+                  <View style={pickerStyles.statCard}>
+                    <Text style={pickerStyles.statLabel}>Jugadores</Text>
+                    <Text style={pickerStyles.statValue}>
+                      {playersLabel}
+                    </Text>
+                  </View>
+                  <View style={pickerStyles.statCard}>
+                    <Text style={pickerStyles.statLabel}>Pista</Text>
+                    <Text style={pickerStyles.statValue}>
+                      {courtLabel}
+                    </Text>
+                  </View>
+                </View>
+              </Pressable>
+            );
+          })
+        )}
+
+        {/* Botón volver / añadir sin seleccionar más */}
+        <View
+          style={{
+            marginTop: 16,
+            flexDirection: "row",
+            gap: 10,
+          }}
+        >
+          <Pressable
+            style={[baseStyles.lightButton, { flex: 1 }]}
+            onPress={closeExercisePicker}
+          >
+            <Text style={baseStyles.lightText}>Volver</Text>
+          </Pressable>
+
+          <Pressable
+            style={[baseStyles.darkButton, { flex: 1 }]}
+            onPress={closeExercisePicker}
+          >
+            <Text style={baseStyles.darkText}>Añadir ejercicios</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+    );
+  }
+
+  // ----- MODO FORMULARIO NORMAL -----
   return (
     <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
       <Text style={baseStyles.sectionTitle}>Crear nuevo entrenamiento</Text>
@@ -143,16 +322,6 @@ export function TrainingCreator({ onClose, onCreated, onGoToExercisesTab }) {
         }}
       />
 
-      <Label>Ejercicios del entrenamiento</Label>
-      <Pressable
-        style={localStyles.exerciseButton}
-        onPress={onGoToExercisesTab}
-      >
-        <Text style={localStyles.exerciseButtonText}>
-          + Añadir ejercicios al entrenamiento
-        </Text>
-      </Pressable>
-
       <Label>Descripción</Label>
       <Input
         placeholder="Notas adicionales sobre el entrenamiento"
@@ -160,6 +329,41 @@ export function TrainingCreator({ onClose, onCreated, onGoToExercisesTab }) {
         onChangeText={setDescription}
         multiline
       />
+
+      {/* RESUMEN DE EJERCICIOS SELECCIONADOS + BOTÓN SELECCIONAR */}
+      <View
+        style={{
+          marginTop: 12,
+          padding: 12,
+          borderRadius: 10,
+          backgroundColor: "#eef2ff",
+        }}
+      >
+        <Text
+          style={{
+            color: "#4338ca",
+            fontWeight: "600",
+            marginBottom: 4,
+          }}
+        >
+          Ejercicios seleccionados
+        </Text>
+        <Text style={{ color: "#4b5563", fontSize: 13 }}>
+          Actualmente has seleccionado {selectedExerciseIds.length}{" "}
+          ejercicio(s) para este entrenamiento.
+        </Text>
+        <Pressable
+          style={[
+            baseStyles.lightButton,
+            { marginTop: 8, borderColor: "#4f46e5", borderWidth: 1 },
+          ]}
+          onPress={openExercisePicker}
+        >
+          <Text style={[baseStyles.lightText, { color: "#1d1b7f" }]}>
+            Seleccionar ejercicios
+          </Text>
+        </Pressable>
+      </View>
 
       <View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>
         <Pressable
@@ -278,5 +482,44 @@ const localStyles = StyleSheet.create({
     color: "#ffffff",
     fontWeight: "600",
     fontSize: 14,
+  },
+});
+
+const pickerStyles = StyleSheet.create({
+  card: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    marginBottom: 12,
+    overflow: "hidden",
+  },
+  cardSelected: {
+    borderColor: "#22c55e",
+    borderWidth: 2,
+  },
+  statsRow: {
+    flexDirection: "row",
+    paddingHorizontal: 10,
+    paddingTop: 8,
+    paddingBottom: 10,
+    gap: 8,
+  },
+  statCard: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#ecfeff",
+  },
+  statLabel: {
+    fontSize: 11,
+    color: "#6b7280",
+  },
+  statValue: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#111827",
   },
 });

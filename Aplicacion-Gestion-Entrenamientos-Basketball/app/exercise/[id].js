@@ -1,41 +1,46 @@
-// app/training/[id].js
+// app/exercise/[id].js
 import React, { useState, useEffect } from "react";
-import { ScrollView, View, Text, ImageBackground, Pressable, Alert, ActivityIndicator} from "react-native";
+import {
+  ScrollView,
+  View,
+  Text,
+  Pressable,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { supabase } from "../../lib/supabase";
 import { teamStyles as styles } from "../../components/stylesTeams";
 import { CloseIcon } from "../../components/icons";
 
-export default function TrainingDetail() {
+export default function ExerciseDetail() {
   const router = useRouter();
-  const { id: trainingId } = useLocalSearchParams(); 
+  const { id } = useLocalSearchParams();
 
-  const [training, setTraining] = useState(null);
+  const [exercise, setExercise] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Cargar entrenamiento desde la tabla trainings
   useEffect(() => {
-    if (!trainingId) return;
-
+    if (!id) return;
     (async () => {
       const { data, error } = await supabase
-        .from("trainings")
+        .from("exercises")
         .select("*")
-        .eq("id", trainingId)
+        .eq("id", id)
         .single();
 
       if (error) {
-        console.log("Error loading training", error);
+        console.log("Error loading exercise", error);
       }
-      setTraining(data || null);
+      setExercise(data || null);
       setLoading(false);
     })();
-  }, [trainingId]);
+  }, [id]);
 
   const handleDelete = async () => {
     Alert.alert(
-      "Eliminar entrenamiento",
-      "¿Seguro que quieres borrar este entrenamiento?",
+      "Eliminar ejercicio",
+      "¿Seguro que quieres borrar este ejercicio?",
       [
         { text: "Cancelar", style: "cancel" },
         {
@@ -43,15 +48,15 @@ export default function TrainingDetail() {
           style: "destructive",
           onPress: async () => {
             try {
-              await supabase.from("trainings").delete().eq("id", trainingId);
+              await supabase.from("exercises").delete().eq("id", id);
             } catch (e) {
               Alert.alert(
                 "Error",
-                e.message || "No se pudo borrar el entrenamiento"
+                e.message || "No se pudo borrar el ejercicio"
               );
               return;
             }
-            router.replace("/entrenamientos");
+            router.replace("/entrenamientos?tab=exercises");
           },
         },
       ]
@@ -59,7 +64,11 @@ export default function TrainingDetail() {
   };
 
   const handleEdit = () => {
-    router.push(`/training/edit/${trainingId}`);
+    router.push(`/exercise/edit/${id}`);
+  };
+
+  const handleGoToBoard = () => {
+    router.push("/pizarra");
   };
 
   if (loading) {
@@ -72,77 +81,68 @@ export default function TrainingDetail() {
     );
   }
 
-  if (!training) {
+  if (!exercise) {
     return (
       <View
         style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
       >
-        <Text>No se encontró el entrenamiento</Text>
+        <Text>No se encontró el ejercicio</Text>
       </View>
     );
   }
 
-  // Mapeo flexible de columnas según tu tabla
-  const date = training.date || training.training_date || "";
-  const durationRaw =
-    training.duration_minutes ??
-    training.duration ??
-    training.duration_minutos ??
-    null;
-  const playersRaw =
-    training.players_count ?? training.players ?? training.num_players ?? null;
+  const courtLabel = exercise.court
+    ? {
+        full: "Pista completa",
+        half: "Media pista",
+        quarter: "1/4 pista",
+        none: "Sin pista",
+      }[exercise.court] || exercise.court
+    : "Sin pista";
 
-  const durationLabel = durationRaw != null ? `${durationRaw} min` : "-";
+  const durationLabel = exercise.duration
+    ? `${exercise.duration} min`
+    : "-";
+
   const playersLabel =
-    playersRaw != null && playersRaw !== "" ? String(playersRaw) : "-";
+    exercise.players != null && exercise.players !== ""
+      ? String(exercise.players)
+      : "-";
 
-  const courtValue =
-    training.court || training.court_type || training.court_value || null;
-  const courtLabel =
-    training.court_label ||
-    ({
-      full: "Pista completa",
-      half: "Media pista",
-      quarter: "1/4 pista",
-      none: "Sin pista",
-    }[courtValue] ?? "Sin pista");
-
-  const teamName =
-    training.team_name || training.team || training.team_label || "Sin equipo";
-
-  const description = training.description || "";
-
-  const coverSource = training.cover_url
-    ? { uri: training.cover_url }
-    : require("../../img/train.jpg");
+  const typeLabel = exercise.type || "Ejercicio";
+  const description = exercise.description || "";
 
   return (
     <ScrollView style={styles.screen}>
-      {/* Cabecera con imagen */}
-      <View style={{ position: "relative" }}>
-        <ImageBackground
-          source={coverSource}
-          style={{ height: 220, justifyContent: "flex-end" }}
+      {/* CABECERA SIMPLE + BOTÓN CERRAR */}
+      <View
+        style={{
+          paddingTop: 40,
+          paddingHorizontal: 16,
+          paddingBottom: 12,
+          backgroundColor: "#0f172a",
+        }}
+      >
+        <Text
+          style={[
+            styles.teamTitle,
+            { fontSize: 20, color: "#fff", marginRight: 40 },
+          ]}
         >
-          <View style={styles.teamCoverOverlay} />
-          <View style={{ padding: 16 }}>
-            <Text style={[styles.teamTitle, { fontSize: 20 }]}>
-              {teamName || "Entrenamiento"}
-            </Text>
-            {date ? (
-              <Text style={styles.teamSubtitle}>{date}</Text>
-            ) : null}
-          </View>
-        </ImageBackground>
+          {exercise.name}
+        </Text>
+        <Text style={[styles.teamSubtitle, { color: "#cbd5f5" }]}>
+          {typeLabel}
+        </Text>
 
-        {/* Botón cerrar */}
+        {/* Botón cerrar en la esquina */}
         <Pressable
           onPress={() => router.back()}
           style={{
             position: "absolute",
-            top: 28,
-            right: 20,
-            backgroundColor: "rgba(0,0,0,0.5)",
+            top: 40,
+            right: 16,
+            backgroundColor: "rgba(0,0,0,0.4)",
             borderRadius: 20,
             width: 36,
             height: 36,
@@ -154,15 +154,17 @@ export default function TrainingDetail() {
         </Pressable>
       </View>
 
-      {/* Contenido */}
+      {/* CONTENIDO */}
       <View style={{ padding: 16 }}>
         <Text style={[styles.sectionTitle, { marginTop: 0 }]}>
-          Información del entrenamiento
+          Información del ejercicio
         </Text>
+
+        <Text style={{ color: "#6b7280", marginTop: 4 }}>{typeLabel}</Text>
 
         <View
           style={{
-            marginTop: 12,
+            marginTop: 16,
             borderRadius: 12,
             backgroundColor: "#fff",
             borderWidth: 1,
@@ -177,31 +179,16 @@ export default function TrainingDetail() {
               justifyContent: "space-between",
             }}
           >
-            <InfoItem label="Equipo" value={teamName || "Sin equipo"} />
-            <Divider />
             <InfoItem label="Duración" value={durationLabel} />
             <Divider />
             <InfoItem label="Jugadores" value={playersLabel} />
+            <Divider />
+            <InfoItem label="Pista" value={courtLabel} />
           </View>
         </View>
 
-        <View
-          style={{
-            marginTop: 12,
-            borderRadius: 12,
-            backgroundColor: "#fff",
-            borderWidth: 1,
-            borderColor: "#e5e7eb",
-            paddingVertical: 12,
-            paddingHorizontal: 14,
-          }}
-        >
-          <InfoItem label="Pista" value={courtLabel} />
-        </View>
-
-        {/* Ejercicios / descripción */}
         <Text style={[styles.sectionTitle, { marginTop: 20 }]}>
-          Ejercicios del entrenamiento
+          Descripción del ejercicio
         </Text>
         <View
           style={{
@@ -212,10 +199,29 @@ export default function TrainingDetail() {
           }}
         >
           <Text style={{ color: "#4b5563", fontSize: 13 }}>
-            {description ||
-              "Aún no has añadido ejercicios."}
+            {exercise.description ||
+              "Aún no has añadido descripción para este ejercicio."}
           </Text>
         </View>
+
+        {/* BOTÓN IR A PIZARRA */}
+        <Pressable
+          style={[
+            styles.lightButton,
+            {
+              marginTop: 24,
+              marginBottom: 4,
+              borderColor: "#4f46e5",
+              borderWidth: 1,
+              backgroundColor: "#eef2ff",
+            },
+          ]}
+          onPress={handleGoToBoard}
+        >
+          <Text style={[styles.lightText, { color: "#1d1b7f" }]}>
+            Ir a Pizarra Táctica
+          </Text>
+        </Pressable>
 
         {/* ACCIONES: Editar / Borrar */}
         <View
@@ -230,14 +236,14 @@ export default function TrainingDetail() {
             style={[styles.lightButton, { flex: 1 }]}
             onPress={handleEdit}
           >
-            <Text style={styles.lightText}>Editar entrenamiento</Text>
+            <Text style={styles.lightText}>Editar ejercicio</Text>
           </Pressable>
 
           <Pressable
             style={[styles.darkButton, { flex: 1 }]}
             onPress={handleDelete}
           >
-            <Text style={styles.darkText}>Borrar entrenamiento</Text>
+            <Text style={styles.darkText}>Borrar ejercicio</Text>
           </Pressable>
         </View>
       </View>

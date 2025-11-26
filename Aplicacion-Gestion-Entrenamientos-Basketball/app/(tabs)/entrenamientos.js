@@ -6,6 +6,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { supabase } from "../../lib/supabase";
 import { TrainingCreator } from "../../components/TrainingCreator";
+import { ExerciseCreator } from "../../components/ExerciseCreator";
 import { teamStyles as tstyles } from "../../components/stylesTeams";
 
 
@@ -15,17 +16,35 @@ export default function Entrenamientos() {
   const bsRef = useRef(null);
 
   const [activeTab, setActiveTab] = useState("trainings"); // 'trainings' | 'exercises'
+  const [creatorMode, setCreatorMode] = useState(null);
   const [trainings, setTrainings] = useState([]);          // TODO: cargar de Supabase
   const [exercises, setExercises] = useState([]);          // TODO: cargar de Supabase
   const [loadingTrainings, setLoadingTrainings] = useState(false);
   const [loadingExercises, setLoadingExercises] = useState(false);
 
-  const openCreator = () => bsRef.current?.expand();
-  const closeCreator = () => bsRef.current?.close();
+  const openTrainingCreator = () => {
+    setCreatorMode("training");
+    bsRef.current?.expand();
+  };
+  const openExerciseCreator = () => {
+    setCreatorMode("exercise");
+    bsRef.current?.expand();
+  };
+  const closeCreator = () => {
+    setCreatorMode(null);
+    bsRef.current?.close();
+  };
 
-  const handleTrainingCreated = (training) => {
-    if (training) setTrainings((prev) => [training, ...prev]);
+  const handleTrainingCreated = () => {
+    fetchTrainings();
     closeCreator();
+    setActiveTab("trainings");
+  };
+
+  const handleExerciseCreated = () => {
+    fetchExercises();
+    closeCreator();
+    setActiveTab("exercises");
   };
 
   const fetchTrainings = useCallback(async () => {
@@ -45,10 +64,28 @@ export default function Entrenamientos() {
     }
   }, []);
 
+  const fetchExercises = useCallback(async () => {
+    setLoadingExercises(true);
+    try {
+      const { data, error } = await supabase
+        .from("exercises")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setExercises(data || []);
+    } catch (e) {
+      console.error("Error cargando ejercicios", e);
+    } finally {
+      setLoadingExercises(false);
+    }
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       fetchTrainings();
-    }, [fetchTrainings])
+      fetchExercises();
+    }, [fetchTrainings, fetchExercises])
   );
 
   const goToExercisesTab = () => {
@@ -62,7 +99,7 @@ export default function Entrenamientos() {
         <Text style={{ fontSize: 26 }}>🏀</Text>
       </View>
       <Text style={styles.emptyText}>Aún no has creado ningún entrenamiento</Text>
-      <Pressable style={styles.primaryButton} onPress={openCreator}>
+      <Pressable style={styles.primaryButton} onPress={openTrainingCreator}>
         <Text style={styles.primaryButtonText}>
           + Crear tu primer entrenamiento
         </Text>
@@ -76,6 +113,11 @@ export default function Entrenamientos() {
         <Text style={{ fontSize: 26 }}>📋</Text>
       </View>
       <Text style={styles.emptyText}>Aún no has creado ningún ejercicio</Text>
+      <Pressable style={styles.primaryButton} onPress={openExerciseCreator}>
+        <Text style={styles.primaryButtonText}>
+          + Crear tu primer ejercicio
+        </Text>
+      </Pressable>
     </View>
   );
 
@@ -89,20 +131,12 @@ export default function Entrenamientos() {
         : require("../../img/train.jpg");   
     
     const goToDetail = () => {
-        router.push({
+      router.push({
         pathname: "/training/[id]",
-        params: {
-            id: item.id,
-            date: item.date,
-            duration: item.duration,
-            players: item.players,
-            description: item.description,
-            court_label: item.court_label,
-            team_name: item.team_name,
-            cover_url: item.cover_url || "",
-        },
-        });
+        params: { id: item.id },
+      });
     };
+
     return (
       <Pressable style={styles.trainingCard} onPress={goToDetail}>
         <View style={styles.trainingImageWrapper}>
@@ -155,6 +189,84 @@ export default function Entrenamientos() {
     );
   };
 
+  const renderExerciseCard = ({ item }) => {
+    const duration = item.duration ? `${item.duration} min` : "-";
+    const players = item.players || "-";
+    const courtLabel = item.court
+        ? {
+            full: "Pista completa",
+            half: "Media pista",
+            quarter: "1/4 pista",
+            none: "Sin pista",
+        }[item.court] || item.court
+        : "Sin pista";
+
+    const typeLabel = item.type || "Ejercicio";
+
+    const goToDetail = () => {
+        router.push({
+        pathname: "/exercise/[id]",
+        params: { id: item.id },
+        });
+    };
+
+    return (
+        <Pressable style={styles.trainingCard} onPress={goToDetail}>
+        <View
+            style={{
+            paddingHorizontal: 12,
+            paddingTop: 10,
+            paddingBottom: 6,
+            }}
+        >
+            <Text
+            style={{
+                fontSize: 15,
+                fontWeight: "700",
+                color: "#111827",
+                marginBottom: 4,
+            }}
+            >
+            {item.name}
+            </Text>
+            <Text
+            style={{
+                fontSize: 12,
+                color: "#6b7280",
+            }}
+            >
+            {typeLabel}
+            </Text>
+        </View>
+
+        <View style={styles.statsRow}>
+            <View style={[styles.statCard, { backgroundColor: "#dbf7fbff" }]}>
+            <Text style={styles.statLabel}>Duración</Text>
+            <Text style={styles.statValue}>{duration}</Text>
+            </View>
+
+            <View style={[styles.statCard, { backgroundColor: "#dbf7fbff" }]}>
+            <Text style={styles.statLabel}>Jugadores</Text>
+            <Text style={styles.statValue}>{players}</Text>
+            </View>
+
+            <View style={[styles.statCard, { backgroundColor: "#dbf7fbff" }]}>
+            <Text style={styles.statLabel}>Pista</Text>
+            <Text style={styles.statValue}>{courtLabel}</Text>
+            </View>
+        </View>
+
+        {item.description ? (
+            <View
+            style={{ marginHorizontal: 10, marginBottom: 10, marginTop: 6 }}
+            >
+            <Text style={styles.exercisesText}>{item.description}</Text>
+            </View>
+        ) : null}
+        </Pressable>
+    );
+    };
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <View style={[tstyles.screen, { paddingHorizontal: 16, paddingTop: 16 }]}>
@@ -204,7 +316,7 @@ export default function Entrenamientos() {
               <Text style={styles.headerTitle}>
                 Mis entrenamientos creados ({trainings.length})
               </Text>
-              <Pressable style={styles.smallCreateButton} onPress={openCreator}>
+              <Pressable style={styles.smallCreateButton} onPress={openTrainingCreator}>
                 <Text style={styles.smallCreateButtonText}>+ Crear</Text>
               </Pressable>
             </View>
@@ -231,7 +343,14 @@ export default function Entrenamientos() {
               <Text style={styles.headerTitle}>
                 Mis ejercicios creados ({exercises.length})
               </Text>
+            <Pressable
+                style={styles.smallCreateButton}
+                onPress={openExerciseCreator}
+              >
+                <Text style={styles.smallCreateButtonText}>+ Crear</Text>
+              </Pressable>
             </View>
+
 
             {loadingExercises ? (
               <ActivityIndicator style={{ marginTop: 16 }} />
@@ -242,17 +361,13 @@ export default function Entrenamientos() {
                 data={exercises}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={{ paddingVertical: 12 }}
-                renderItem={({ item }) => (
-                  <Pressable style={styles.trainingCard}>
-                    <Text>{item.name}</Text>
-                  </Pressable>
-                )}
+                renderItem={renderExerciseCard}
               />
             )}
           </View>
         )}
 
-        {/* BottomSheet creador */}
+        {/* BottomSheet creador (entreno / ejercicio) */}
         <BottomSheet
           ref={bsRef}
           snapPoints={snapPoints}
@@ -261,11 +376,23 @@ export default function Entrenamientos() {
           onClose={closeCreator}
         >
           <BottomSheetScrollView contentContainerStyle={{ paddingBottom: 24 }}>
-            <TrainingCreator
-              onClose={closeCreator}
-              onCreated={handleTrainingCreated}
-              onGoToExercisesTab={goToExercisesTab}
-            />
+            {creatorMode === "training" && (
+              <TrainingCreator
+                onClose={closeCreator}
+                onCreated={handleTrainingCreated}
+                onGoToExercisesTab={goToExercisesTab}
+              />
+            )}
+            {creatorMode === "exercise" && (
+              <ExerciseCreator
+                onClose={closeCreator}
+                onCreated={handleExerciseCreated}
+                onGoToBoard={() => {
+                  closeCreator();          // cerramos el bottom sheet
+                  router.push("/pizarra"); // navegamos a la pestaña Pizarra
+                }}
+              />
+            )}
           </BottomSheetScrollView>
         </BottomSheet>
       </View>
