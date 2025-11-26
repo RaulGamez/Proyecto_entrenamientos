@@ -29,6 +29,7 @@ export default function Teams() {
     const t = await getUserTeams();
     setTeams(t);
   }, []);
+  
   const loadPlayers = useCallback(async () => {
     const p = await getUserPlayers();
     setPlayers(p);

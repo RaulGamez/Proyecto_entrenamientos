@@ -99,38 +99,6 @@ export async function deleteTeam(teamId) {
   return true;
 }
 
-/*export async function getUserPlayersOld() {
-  const { data: players, error: playersError } = await supabase
-    .from("users_players")
-    .select(`
-      player_id,
-      players (
-        id,
-        name,
-        number,
-        role,
-        age,
-        height,
-        status,
-        created_at,
-        created_by,
-        creator:created_by ( username )
-        team:id (
-          team_id (
-            team ( name )
-            )
-          )
-      )
-    `)
-    .eq("user_id", user.id)
-    .order("name", { foreignTable: "players", ascending: true });
-  if (error) {
-    console.warn("getUserPlayers", error);
-    return [];
-  }
-  return data || [];
-}*/
-
 export async function getUserPlayers() {
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) throw userError || new Error("Usuario no autenticado");
@@ -186,4 +154,45 @@ export async function getTeamPlayers() {
     .order('name', { referencedTable: 'players', ascending: true })
     .limit(6, { referencedTable: 'players' })
     .single();
+}
+
+export async function getEvents() {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) throw userError || new Error("Usuario no autenticado");
+
+  const { data, error } = await supabase
+    .from("events")
+    .select("*")
+    .eq("created_by", user.id)
+    .order("start", { ascending: true });
+
+  if (error) {
+    console.error("Error al cargar eventos:", error.message);
+    throw error;
+  }
+
+  return (data || []).map((e) => ({
+    id: e.id,
+    title: e.title,
+    start: new Date(e.start),
+    end: new Date(e.end),
+  }));
+}
+
+export async function getTasks() {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) throw userError || new Error("Usuario no autenticado");
+
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("*")
+    .eq("created_by", user.id)
+    .order("done", { ascending: true });
+
+  if (error) {
+    console.error("Error al cargar tasks:", error.message);
+    throw error;
+  }
+
+  return (data || []);
 }

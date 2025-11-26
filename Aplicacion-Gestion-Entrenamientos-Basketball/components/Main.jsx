@@ -5,6 +5,7 @@ import dayjs from "dayjs";
 import "dayjs/locale/es";
 import { supabase } from "../lib/supabase";
 import { styles } from "./styles";
+import { getEvents, getTasks } from "../lib/queries.js"
 
 // Combina fecha y hora en un objeto Date
 function combineDateAndTime(baseDate, hhmm) {
@@ -45,37 +46,12 @@ export function Main() {
     (async () => {
       setLoading(true);
       // events
-      const { data: eventsData, error: errEvents } = await supabase
-        .from("events")
-        .select("*")
-        .order("start", { ascending: true });
-
-      if (errEvents) {
-        console.error(errEvents);
-        Alert.alert("Supabase", "No se pudieron cargar los eventos.");
-      } else {
-        // Convertir a Date para el calendario
-        const mapped = (eventsData || []).map((e) => ({
-          id: e.id,
-          title: e.title,
-          start: new Date(e.start),
-          end: new Date(e.end),
-        }));
-        setEvents(mapped);
-      }
+      const e = await getEvents(); // en /queries
+      setEvents(e);
 
       // tasks
-      const { data: tasksData, error: errTasks } = await supabase
-        .from("tasks")
-        .select("*")
-        .order("created_at", { ascending: true });
-
-      if (errTasks) {
-        console.error(errTasks);
-        Alert.alert("Supabase", "No se pudieron cargar las tareas.");
-      } else {
-        setTasks(tasksData || []);
-      }
+      const t = await getTasks();
+      setTasks(t);
 
       setLoading(false);
     })();
