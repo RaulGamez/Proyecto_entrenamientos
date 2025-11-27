@@ -4,6 +4,7 @@ import { View, Text, TextInput, Pressable, Platform, ActivityIndicator, ScrollVi
 import { supabase } from "../lib/supabase";
 import { useUser } from "../contexts/UserContexts";
 import { styles as baseStyles } from "./styles";
+import { createTraining } from "../lib/queries";
 
 const COURT_OPTIONS = [
   { value: "full", label: "Pista completa" },
@@ -106,15 +107,11 @@ export function TrainingCreator({ onClose, onCreated, onGoToExercisesTab }) {
         created_by: user?.id || null,
       };
 
-      const { data, error } = await supabase
-        .from("trainings")
-        .insert(payload)
-        .select("*")
-        .single();
+      const { error } = await createTraining(payload);
 
       if (error) throw error;
 
-      onCreated?.(data);
+      onCreated?.();
     } catch (e) {
       console.error("Error creando entrenamiento", e);
       setError(e.message || "No se pudo crear el entrenamiento");

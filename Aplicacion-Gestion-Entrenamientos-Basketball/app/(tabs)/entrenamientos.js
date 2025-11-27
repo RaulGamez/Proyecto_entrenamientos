@@ -8,6 +8,7 @@ import { supabase } from "../../lib/supabase";
 import { TrainingCreator } from "../../components/TrainingCreator";
 import { ExerciseCreator } from "../../components/ExerciseCreator";
 import { teamStyles as tstyles } from "../../components/stylesTeams";
+import { getUserExercises } from "../../lib/queries";
 
 
 export default function Entrenamientos() {
@@ -67,10 +68,8 @@ export default function Entrenamientos() {
   const fetchExercises = useCallback(async () => {
     setLoadingExercises(true);
     try {
-      const { data, error } = await supabase
-        .from("exercises")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const { data, error } = await getUserExercises();
+      console.log(data);
 
       if (error) throw error;
       setExercises(data || []);

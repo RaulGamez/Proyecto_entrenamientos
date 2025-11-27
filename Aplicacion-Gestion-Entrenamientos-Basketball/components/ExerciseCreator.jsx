@@ -4,6 +4,7 @@ import {View, Text, TextInput, Pressable, Platform, ActivityIndicator, ScrollVie
 import { supabase } from "../lib/supabase";
 import { useUser } from "../contexts/UserContexts";
 import { styles as baseStyles } from "./styles";
+import { createExercise } from "../lib/queries";
 
 const COURT_OPTIONS = [
   { value: "full", label: "Pista completa" },
@@ -69,15 +70,9 @@ export function ExerciseCreator({ onClose, onCreated, onGoToBoard }) {
         created_by: user?.id || null,
       };
 
-      const { data, error } = await supabase
-        .from("exercises")
-        .insert(payload)
-        .select("*")
-        .single();
+      const {data: exercise, error: e } = await createExercise(payload);
 
-      if (error) throw error;
-
-      onCreated?.(data);
+      onCreated?.(exercise);
     } catch (e) {
       console.error("Error creando ejercicio", e);
       setError(e.message || "No se pudo crear el ejercicio");

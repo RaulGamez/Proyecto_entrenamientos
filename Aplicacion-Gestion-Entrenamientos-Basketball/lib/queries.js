@@ -1,4 +1,6 @@
 import { supabase } from "./supabase";
+import 'react-native-get-random-values';
+import { v4 as uuidv4 } from 'uuid';
 
 // Obtener equipos del usuario autenticado y participantes
 export async function getUserTeams() {
@@ -195,4 +197,87 @@ export async function getTasks() {
   }
 
   return (data || []);
+}
+
+export async function createExercise(exercise) {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) throw userError || new Error("Usuario no autenticado");
+  
+  
+  // Creamos el equipo
+  const { data, error } = await supabase
+  .from("exercises")
+  .insert(exercise)
+  .select();
+  
+  if (error) throw error;
+  
+  // Relacion en users_teams
+  const { error: linkError } = await supabase
+    .from("users_exercises")
+    .insert([{ user_id: user.id, exercise_id: data.id }]);
+
+  if (linkError) throw linkError;
+
+  return data;
+}
+
+export async function getUserExercises() {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) throw userError || new Error("Usuario no autenticado");
+
+  const { data, error } = await supabase
+  .from("users_exercises")
+  .select(`
+    exercise_id,
+    exercises (
+      id,
+      name,
+      type,
+      duration,
+      players,
+      court,
+      description,
+      created_at,
+      created_by,
+      creator:created_by ( username )
+    )
+  `)
+  .eq("user_id", user.id)
+  .order("created_at", { foreignTable: "exercises", ascending: false });
+
+  if (error) {
+    console.error("Error al cargar ejercicios:", error.message);
+    return {data: null, error: error};
+  }
+
+  return { data: (data || []).map((d) => d.exercises), error: null};
+}
+
+export async function createTraining(training) {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) throw userError || new Error("Usuario no autenticado");
+  
+  const trainingId = uuidv4();
+  
+  // Creamos el equipo
+  const { error } = await supabase
+  .from("trainings")
+  .insert([{id: trainingId, ...training}])
+  .single();
+  
+  if (error) {
+    return {error: error};
+  }
+  
+  // Relacion en users_teams
+  const { error: linkError } = await supabase
+    .from("users_trainings")
+    .insert([{ user_id: user.id, training_id: trainingId }]);
+
+  if (linkError) {
+    return { error: linkError};
+  }
+
+  return {error: null};
 }
