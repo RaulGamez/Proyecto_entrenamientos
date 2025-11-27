@@ -203,23 +203,27 @@ export async function createExercise(exercise) {
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) throw userError || new Error("Usuario no autenticado");
   
+  const exerciseId = uuidv4();
   
   // Creamos el equipo
-  const { data, error } = await supabase
+  const { error } = await supabase
   .from("exercises")
-  .insert(exercise)
-  .select();
+  .insert([{id: exerciseId, ...exercise}]);
   
-  if (error) throw error;
+  if (error) {
+    return {error};
+  }
   
   // Relacion en users_teams
   const { error: linkError } = await supabase
     .from("users_exercises")
-    .insert([{ user_id: user.id, exercise_id: data.id }]);
+    .insert([{ user_id: user.id, exercise_id: exerciseId }]);
 
-  if (linkError) throw linkError;
+  if (linkError) {
+    return { error: linkError};
+  }
 
-  return data;
+  return {error: null};
 }
 
 export async function getUserExercises() {
@@ -263,8 +267,7 @@ export async function createTraining(training) {
   // Creamos el equipo
   const { error } = await supabase
   .from("trainings")
-  .insert([{id: trainingId, ...training}])
-  .single();
+  .insert([{id: trainingId, ...training}]);
   
   if (error) {
     return {error: error};

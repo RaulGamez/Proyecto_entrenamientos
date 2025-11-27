@@ -70,9 +70,10 @@ export function ExerciseCreator({ onClose, onCreated, onGoToBoard }) {
         created_by: user?.id || null,
       };
 
-      const {data: exercise, error: e } = await createExercise(payload);
+      const {error} = await createExercise(payload);
+      if (error) throw error;
 
-      onCreated?.(exercise);
+      onCreated?.();
     } catch (e) {
       console.error("Error creando ejercicio", e);
       setError(e.message || "No se pudo crear el ejercicio");
