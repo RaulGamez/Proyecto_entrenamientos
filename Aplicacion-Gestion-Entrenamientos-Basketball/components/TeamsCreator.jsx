@@ -7,6 +7,7 @@ import { supabase } from "../lib/supabase";
 import { useUser } from "../contexts/UserContexts";
 import { teamStyles as styles } from "./stylesTeams";
 import { TrainingSchedulePicker } from "./TrainingSchedulePicker";
+import { createTeam } from "../lib/queries";
 
 
 export function TeamsCreator({ onClose, onCreated }) {
@@ -52,7 +53,7 @@ export function TeamsCreator({ onClose, onCreated }) {
 
       // preparamos los datos antes de insertar
       const payload = {
-        name: name.trim(),
+        name: name.trim() || "Equipo sin título",
         category: category.trim() || null,
         players_target: playersTarget === "" ? null : Number(playersTarget),
         training_days: schedule,
@@ -68,21 +69,7 @@ export function TeamsCreator({ onClose, onCreated }) {
       };
 
       // insertamos en Supabase
-      const { data, error: insertError } = await supabase
-        .from("teams")
-        .insert([payload])
-        .select("id");
-
-      if (insertError) throw insertError;
-
-      const teamId = data?.[0]?.id;
-
-      // añade la relación usuario-equipo
-      const { error: relationError } = await supabase
-        .from("users_teams")
-        .insert([{ user_id: user.id, team_id: teamId }]);
-
-      if (relationError) throw relationError;
+      const { error: insertError } = await createTeam(payload);
 
       onCreated && (await onCreated());
       onClose && (await onClose());

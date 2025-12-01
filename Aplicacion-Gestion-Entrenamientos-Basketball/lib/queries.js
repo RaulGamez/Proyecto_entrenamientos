@@ -36,29 +36,28 @@ export async function getUserTeams() {
 }
 
 // Crear nuevo equipo
-export async function createTeam(name) {
+export async function createTeam(team) {
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) throw userError || new Error("Usuario no autenticado");
 
-  const teamName = name?.trim() || "Equipo sin título";
+  const teamId = uuidv4();
 
   // Creamos el equipo
-  const { data: team, error: teamError } = await supabase
+  const { data, error: teamError } = await supabase
     .from("teams")
-    .insert([{ name: teamName, created_by: user.id }])
-    .select()
+    .insert([{ id: teamId, ...team}])
     .single();
 
-  if (teamError) throw teamError;
+  if (teamError) return {teamError};
 
   // Relacion en users_teams
   const { error: linkError } = await supabase
     .from("users_teams")
-    .insert([{ user_id: user.id, team_id: team.id }]);
+    .insert([{ user_id: user.id, team_id: teamId }]);
 
-  if (linkError) throw linkError;
+  if (linkError) return {linkError};
 
-  return team;
+  return {error: null};
 }
 
 // Eliminar un equipo (si el usuario es unico miembro)
@@ -99,6 +98,43 @@ export async function deleteTeam(teamId) {
   if (teamError) throw teamError;
 
   return true;
+}
+
+export async function createPlayer({player, teams}) {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) throw userError || new Error("Usuario no autenticado");
+
+  const playerId = uuidv4();
+
+  // Creamos el jugador
+  const { data, error: playerError } = await supabase
+    .from("players")
+    .insert([{ id: playerId, ...player}])
+    .single();
+
+  if (playerError) return {error: playerError};
+
+  // Relacion en users_players
+  const { error: linkError } = await supabase
+    .from("users_players")
+    .insert([{ user_id: user.id, player_id: playerId }]);
+
+  if (linkError) return {error: linkError};
+
+  if (teams.length > 0) {
+    // insert in teams_players
+    const rows = teams.map(teamId => ({
+      player_id: playerId,
+      team_id: teamId,
+    }));
+    const { error: tpRelationError } = await supabase
+    .from("teams_players")
+    .insert(rows);
+
+    if (tpRelationError) return {error: tpRelationError};
+  }
+
+  return {error: null};
 }
 
 export async function getUserPlayers() {
@@ -283,4 +319,39 @@ export async function createTraining(training) {
   }
 
   return {error: null};
+}
+
+export async function getUserTrainings() {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) throw userError || new Error("Usuario no autenticado");
+
+  const { data, error } = await supabase
+  .from("users_trainings")
+  .select(`
+    training_id,
+    trainings (
+      id,
+      created_at,
+      date,
+      duration,
+      players,
+      court,
+      description,
+      created_at,
+      exercises,
+      team_id,
+      team:team_id ( name ),
+      created_by,
+      creator:created_by ( username )
+    )
+  `)
+  .eq("user_id", user.id)
+  .order("created_at", { foreignTable: "trainings", ascending: false });
+
+  if (error) {
+    console.error("Error al cargar entrenamientos:", error.message);
+    return {data: null, error: error};
+  }
+
+  return { data: (data || []).map((d) => d.trainings), error: null};
 }

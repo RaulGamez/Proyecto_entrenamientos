@@ -2,7 +2,8 @@
 import { useState } from "react";
 import { View, Text, TextInput, Pressable, Platform } from "react-native";
 import { supabase } from "../lib/supabase";
-import { validatePlayerinfo } from "../lib/validators"
+import { validatePlayerInfo } from "../lib/validators";
+import { createPlayer } from "../lib/queries";
 import { styles } from "./styles";
 
 export function PlayerCreator({ teams = [], onCreated, onClose }) {
@@ -24,50 +25,31 @@ export function PlayerCreator({ teams = [], onCreated, onClose }) {
 
   const handleSavePlayer = async () => {
     const playerInfo = {
-      name,
+      name: name || "Jugador sin nombre",
       number: number ? Number(number) : null,
       age: age ? Number(age) : null,
       role: role || null,
       height: height || null,
       status: "active",
     };
-    setFormatErrors(validatePlayerinfo(playerInfo))
+    const validation = validatePlayerInfo(playerInfo);
+    console.log(validation);
+    setFormatErrors(validation);
     const hasErrors = Object.values(formatErrors).some(msg => msg !== "");
     if (hasErrors) return;
 
     setIsLoading(true);
     try {
       // insert in players table
-      const { data: player, error } = await supabase.from("players").insert([playerInfo]);
+      const { error } = await createPlayer({player: playerInfo, teams: teamsId});
       if (error) {
         throw error;
         return;
       }
 
-      // insert in users_players
-      const { error: relationError } = await supabase
-        .from("users_players")
-        .insert([{ user_id: user.id, player_id: player.id }]);
-      if (relationError) {
-        throw relationError;
-        return;
-      }
-      
-      // insert in teams_players
-      const rows = teamsId.map(teamId => ({
-        player_id: player.id,
-        team_id: teamId,
-      }));
-      const { error: tpRelationError } = await supabase.from("teams_players").insert(rows);
-      if (tpRelationError) {
-        throw tpRelationError;
-        return;
-      }
-
-
       onCreated?.();
     } catch (e) {
-      alert(e.message || String(e));
+      alert("aqui es el error: " + e.message || String(e));
     } finally {
       setIsLoading(false);
     }
