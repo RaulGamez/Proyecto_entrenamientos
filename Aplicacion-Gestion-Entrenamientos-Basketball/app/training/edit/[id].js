@@ -8,7 +8,6 @@ import { teamStyles as styles } from "../../../components/stylesTeams";
 const COURT_OPTIONS = [
   { value: "full", label: "Pista completa" },
   { value: "half", label: "Media pista" },
-  { value: "quarter", label: "1/4 pista" },
   { value: "none", label: "Sin pista" },
 ];
 
@@ -33,7 +32,8 @@ export default function EditTraining() {
   const [loadingExercises, setLoadingExercises] = useState(false);
   const [selectedExerciseIds, setSelectedExerciseIds] = useState([]);
   const [selectedExercises, setSelectedExercises] = useState([]);
-  
+
+  // Cargar entrenamiento inicial
   useEffect(() => {
     (async () => {
       const { data, error } = await supabase
@@ -46,17 +46,28 @@ export default function EditTraining() {
         setError("No se pudo cargar el entrenamiento");
       } else if (data) {
         setDate(data.date || "");
-        setDuration(data.duration?.toString?.() || data.duration_minutes?.toString?.() ||"");
-        setPlayers(data.players?.toString?.() || data.players_count?.toString?.() ||"");
+        setDuration(
+          data.duration?.toString?.() ||
+            data.duration_minutes?.toString?.() ||
+            ""
+        );
+        setPlayers(
+          data.players?.toString?.() ||
+            data.players_count?.toString?.() ||
+            ""
+        );
+
         const court = data.court || null;
         const courtOpt =
-          COURT_OPTIONS.find((o) => o.value === court || o.label === court) ||
-          null;
+          COURT_OPTIONS.find(
+            (o) => o.value === court || o.label === court
+          ) || null;
 
         setCourtValue(courtOpt?.value || null);
         setCourtLabel(courtOpt?.label || "");
         setDescription(data.description || "");
-        // ejercicios guardados
+
+        // ids de ejercicios guardados
         if (Array.isArray(data.exercices)) {
           setSelectedExerciseIds(data.exercices);
         } else {
@@ -68,6 +79,7 @@ export default function EditTraining() {
     })();
   }, [id]);
 
+  // Cargar todos los ejercicios
   const loadExercises = async () => {
     setLoadingExercises(true);
     const { data, error } = await supabase
@@ -81,11 +93,14 @@ export default function EditTraining() {
     setLoadingExercises(false);
   };
 
+  // Sincronizar tarjetas seleccionadas a partir de los ids
   useEffect(() => {
     if (allExercises.length > 0) {
       setSelectedExercises(
         allExercises.filter((ex) => selectedExerciseIds.includes(ex.id))
       );
+    } else {
+      setSelectedExercises([]);
     }
   }, [allExercises, selectedExerciseIds]);
 
@@ -116,9 +131,9 @@ export default function EditTraining() {
         return;
       }
 
-       const payload = {
+      const payload = {
         date: date.trim(),
-        description: description.trim() || null, // columna con typo
+        description: description.trim() || null,
         exercices: selectedExerciseIds.length > 0 ? selectedExerciseIds : null,
       };
 
@@ -128,11 +143,7 @@ export default function EditTraining() {
       payload.duration = isNaN(durNum) ? null : durNum;
       payload.players = isNaN(playersNum) ? null : playersNum;
 
-      if (courtValue) {
-        payload.court = courtValue;
-      } else {
-        payload.court = null;
-      }
+      payload.court = courtValue || null;
 
       const { data, error } = await supabase
         .from("trainings")
@@ -159,19 +170,9 @@ export default function EditTraining() {
     }
   };
 
-  //eliminar un ejercicio del listado local
-  const handleRemoveExercise = (id) => {
-    setSelectedExerciseIds(prev => prev.filter(e => e !== id));
-  };
-
-  // ir a Mis ejercicios para añadir más (tab Mis Ejercicios)
-  const handleGoToExercises = () => {
-    router.push({
-      pathname: "/entrenamientos",
-      params: { tab: "exercises", trainingId: id },
-    });
-    // Luego, en esa pantalla podrás implementar la lógica
-    // para seleccionar ejercicios y actualizar la columna `exercices`
+  // quitar un ejercicio de la lista seleccionada
+  const handleRemoveExercise = (idEx) => {
+    setSelectedExerciseIds((prev) => prev.filter((e) => e !== idEx));
   };
 
   if (loading)
@@ -182,7 +183,7 @@ export default function EditTraining() {
         <ActivityIndicator size="large" />
       </View>
     );
-  
+
   // ----- MODO PICKER EJERCICIOS -----
   if (exercisePickerOpen) {
     return (
@@ -228,7 +229,6 @@ export default function EditTraining() {
               ? {
                   full: "Pista completa",
                   half: "Media pista",
-                  quarter: "1/4 pista",
                   none: "Sin pista",
                 }[item.court] || item.court
               : "Sin pista";
@@ -379,44 +379,76 @@ export default function EditTraining() {
       />
 
       {/* ---------- EJERCICIOS SELECCIONADOS ---------- */}
-      
-      {selectedExercises.length === 0 ? (
-        <Text style={{ color: "#6b7280", fontSize: 13, marginTop: 4 }}>
-          Todavía no has añadido ejercicios a este entrenamiento.
-        </Text>
-      ) : (
-        <View
-          style={{
-            flexDirection: "row",
-            flexWrap: "wrap",
-            gap: 8,
-            marginTop: 8,
-          }}
-        >
-          {selectedExercises.map((ex) => {
-            const key = ex.id || ex.name;
-            const label = ex.name || ex.title || "Ejercicio";
-            return (
-              <View key={key} style={chipStyles.chip}>
-                <Text style={chipStyles.chipText}>{label}</Text>
-                <Pressable
-                  onPress={() => handleRemoveExercise(ex.id)}
-                  style={chipStyles.chipRemove}
-                >
-                  <Text style={{ color: "#6b7280", fontSize: 12 }}>✕</Text>
-                </Pressable>
-              </View>
-            );
-          })}
-        </View>
-      )}
+      <View style={exerciseBoxStyles.container}>
+        <Text style={exerciseBoxStyles.title}>Ejercicios seleccionados</Text>
 
-      <Pressable
-        style={[styles.lightButton, { marginTop: 10 }]}
-        onPress={handleGoToExercises}
-      >
-        <Text style={styles.lightText}>Añadir ejercicios desde Mis ejercicios</Text>
-      </Pressable>
+        {selectedExercises.length === 0 ? (
+          <>
+            <Text style={exerciseBoxStyles.subtitle}>
+              Todavía no has añadido ejercicios a este entrenamiento.
+            </Text>
+            <Pressable
+              style={exerciseBoxStyles.selectButton}
+              onPress={openExercisePicker}
+            >
+              <Text style={exerciseBoxStyles.selectButtonText}>
+                Seleccionar ejercicios
+              </Text>
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <Text style={exerciseBoxStyles.subtitle}>
+              Has seleccionado {selectedExerciseIds.length} ejercicio(s).
+            </Text>
+
+            {selectedExercises.map((ex) => {
+              const durationLabel = ex.duration ? `${ex.duration} min` : "-";
+              const playersLabel =
+                ex.players != null && ex.players !== ""
+                  ? String(ex.players)
+                  : "-";
+
+              return (
+                <Pressable
+                  key={ex.id}
+                  style={exerciseBoxStyles.card}
+                  onPress={() => router.push(`/exercise/${ex.id}`)}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={exerciseBoxStyles.cardTitle}>{ex.name}</Text>
+                    <Text style={exerciseBoxStyles.cardMeta}>
+                      {durationLabel} · {playersLabel} jugadores
+                    </Text>
+                    {ex.type ? (
+                      <Text style={exerciseBoxStyles.cardType}>{ex.type}</Text>
+                    ) : null}
+                  </View>
+
+                  <Pressable
+                    style={exerciseBoxStyles.removePill}
+                    onPress={(e) => {
+                      e.stopPropagation?.();
+                      handleRemoveExercise(ex.id);
+                    }}
+                  >
+                    <Text style={exerciseBoxStyles.removePillText}>Quitar</Text>
+                  </Pressable>
+                </Pressable>
+              );
+            })}
+
+            <Pressable
+              style={[exerciseBoxStyles.selectButton, { marginTop: 8 }]}
+              onPress={openExercisePicker}
+            >
+              <Text style={exerciseBoxStyles.selectButtonText}>
+                Añadir / modificar ejercicios
+              </Text>
+            </Pressable>
+          </>
+        )}
+      </View>
 
       {/* ---------- DESCRIPCIÓN ---------- */}
       <TextInput
@@ -520,5 +552,116 @@ const localStyles = StyleSheet.create({
   dropdownItem: {
     paddingHorizontal: 12,
     paddingVertical: 10,
+  },
+});
+
+const pickerStyles = StyleSheet.create({
+  card: {
+    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    marginBottom: 12,
+    overflow: "hidden",
+  },
+  cardSelected: {
+    borderColor: "#16a34a",
+    borderWidth: 2,
+  },
+  statsRow: {
+    flexDirection: "row",
+    paddingHorizontal: 10,
+    paddingBottom: 8,
+    gap: 8,
+  },
+  statCard: {
+    flex: 1,
+    borderRadius: 10,
+    paddingVertical: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#dbf7fbff",
+  },
+  statLabel: {
+    fontSize: 11,
+    color: "#6b7280",
+  },
+  statValue: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#111827",
+  },
+});
+
+const exerciseBoxStyles = StyleSheet.create({
+  container: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: "#eef2ff",
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1d4ed8",
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: "#4b5563",
+    marginBottom: 8,
+  },
+  selectButton: {
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: "#f97316",
+    alignItems: "center",
+    marginTop: 4,
+  },
+  selectButtonText: {
+    color: "#ffffff",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 6,
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  cardMeta: {
+    fontSize: 12,
+    color: "#6b7280",
+    marginTop: 2,
+  },
+  cardType: {
+    fontSize: 11,
+    color: "#6b21a8",
+    marginTop: 2,
+  },
+  removePill: {
+    marginLeft: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    backgroundColor: "#f9fafb",
+  },
+  removePillText: {
+    fontSize: 12,
+    color: "#6b7280",
+    fontWeight: "600",
   },
 });

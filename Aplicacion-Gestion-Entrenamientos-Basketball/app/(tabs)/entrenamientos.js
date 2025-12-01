@@ -23,6 +23,15 @@ export default function Entrenamientos() {
   const [loadingTrainings, setLoadingTrainings] = useState(false);
   const [loadingExercises, setLoadingExercises] = useState(false);
 
+  // mapa id -> ejercicio para mostrar rápido en las tarjetas
+  const exercisesById = useMemo(() => {
+    const map = {};
+    exercises.forEach((ex) => {
+      map[ex.id] = ex;
+    });
+    return map;
+  }, [exercises]);
+
   const openTrainingCreator = () => {
     setCreatorMode("training");
     bsRef.current?.expand();
@@ -129,6 +138,13 @@ export default function Entrenamientos() {
         ? { uri: item.cover_url }
         : require("../../img/train.jpg");   
     
+    // lista de ejercicios de este entrenamiento, a partir de item.exercices (array de ids)
+    const exerciseList = Array.isArray(item.exercices)
+      ? item.exercices
+          .map((id) => exercisesById[id])
+          .filter(Boolean)
+      : [];
+
     const goToDetail = () => {
       router.push({
         pathname: "/training/[id]",
@@ -176,9 +192,18 @@ export default function Entrenamientos() {
         {/* Ejercicios */}
         <Text style={styles.sectionLabel}>Ejercicios del entrenamiento:</Text>
         <View style={styles.exercisesBox}>
-          <Text style={styles.exercisesText}>
-            {item.description || "Añade ejercicios desde la pestaña Mis ejercicios"}
-          </Text>
+          {exerciseList.length === 0 ? (
+            <Text style={styles.exercisesText}>
+              No hay ejercicios añadidos
+            </Text>
+          ) : (
+            exerciseList.map((ex) => (
+              <Text key={ex.id} style={styles.exercisesText}>
+                • {ex.name || "Ejercicio"}
+                {ex.duration ? ` (${ex.duration} min)` : ""}
+              </Text>
+            ))
+          )}
         </View>
 
         {item.description ? (

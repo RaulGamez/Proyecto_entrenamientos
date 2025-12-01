@@ -5,6 +5,8 @@ import { supabase } from "../lib/supabase";
 import { useUser } from "../contexts/UserContexts";
 import { styles as baseStyles } from "./styles";
 import { createTraining } from "../lib/queries";
+import { useRouter } from "expo-router";
+
 
 const COURT_OPTIONS = [
   { value: "full", label: "Pista completa" },
@@ -16,6 +18,7 @@ const COURT_OPTIONS = [
 
 export function TrainingCreator({ onClose, onCreated, onGoToExercisesTab }) {
   const { user, loading } = useUser();
+  const router = useRouter();
 
   const [saveLoading, setSaveLoading] = useState(false);
   const [error, setError] = useState("");
@@ -65,6 +68,18 @@ export function TrainingCreator({ onClose, onCreated, onGoToExercisesTab }) {
     setLoadingExercises(false);
   };
 
+  // Cada vez que cambien los IDs seleccionados o la lista completa,
+  // recalculamos las tarjetas que se muestran en el formulario.
+  useEffect(() => {
+    if (allExercises.length > 0) {
+      setSelectedExercises(
+        allExercises.filter((ex) => selectedExerciseIds.includes(ex.id))
+      );
+    } else {
+      setSelectedExercises([]);
+    }
+  }, [allExercises, selectedExerciseIds]);
+
   const openExercisePicker = async () => {
     if (allExercises.length === 0) {
       await loadExercises();
@@ -80,6 +95,10 @@ export function TrainingCreator({ onClose, onCreated, onGoToExercisesTab }) {
     setSelectedExerciseIds((prev) =>
       prev.includes(id) ? prev.filter((e) => e !== id) : [...prev, id]
     );
+  };
+
+  const handleRemoveExercise = (id) => {
+    setSelectedExerciseIds((prev) => prev.filter((e) => e !== id));
   };
 
   const handleCreateTraining = async () => {
@@ -327,39 +346,74 @@ export function TrainingCreator({ onClose, onCreated, onGoToExercisesTab }) {
         multiline
       />
 
-      {/* RESUMEN DE EJERCICIOS SELECCIONADOS + BOTÓN SELECCIONAR */}
-      <View
-        style={{
-          marginTop: 12,
-          padding: 12,
-          borderRadius: 10,
-          backgroundColor: "#eef2ff",
-        }}
-      >
-        <Text
-          style={{
-            color: "#4338ca",
-            fontWeight: "600",
-            marginBottom: 4,
-          }}
-        >
-          Ejercicios seleccionados
-        </Text>
-        <Text style={{ color: "#4b5563", fontSize: 13 }}>
-          Actualmente has seleccionado {selectedExerciseIds.length}{" "}
-          ejercicio(s) para este entrenamiento.
-        </Text>
-        <Pressable
-          style={[
-            baseStyles.lightButton,
-            { marginTop: 8, borderColor: "#4f46e5", borderWidth: 1 },
-          ]}
-          onPress={openExercisePicker}
-        >
-          <Text style={[baseStyles.lightText, { color: "#1d1b7f" }]}>
-            Seleccionar ejercicios
-          </Text>
-        </Pressable>
+      {/* ---------- EJERCICIOS SELECCIONADOS ---------- */}
+      <View style={exerciseBoxStyles.container}>
+        <Text style={exerciseBoxStyles.title}>Ejercicios seleccionados</Text>
+
+        {selectedExercises.length === 0 ? (
+          <>
+            <Text style={exerciseBoxStyles.subtitle}>
+              Todavía no has añadido ejercicios a este entrenamiento.
+            </Text>
+            <Pressable
+              style={exerciseBoxStyles.selectButton}
+              onPress={openExercisePicker}
+            >
+              <Text style={exerciseBoxStyles.selectButtonText}>
+                Seleccionar ejercicios
+              </Text>
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <Text style={exerciseBoxStyles.subtitle}>
+              Has seleccionado {selectedExerciseIds.length} ejercicio(s).
+            </Text>
+
+            {selectedExercises.map((ex) => {
+              const durationLabel = ex.duration ? `${ex.duration} min` : "-";
+              const playersLabel =
+                ex.players != null && ex.players !== "" ? String(ex.players) : "-";
+
+              return (
+                <Pressable
+                  key={ex.id}
+                  style={exerciseBoxStyles.card}
+                  onPress={() => router.push(`/exercise/${ex.id}`)} // 👈 ver detalle
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={exerciseBoxStyles.cardTitle}>{ex.name}</Text>
+                    <Text style={exerciseBoxStyles.cardMeta}>
+                      {durationLabel} · {playersLabel} jugadores
+                    </Text>
+                    {ex.type ? (
+                      <Text style={exerciseBoxStyles.cardType}>{ex.type}</Text>
+                    ) : null}
+                  </View>
+
+                  <Pressable
+                    style={exerciseBoxStyles.removePill}
+                    onPress={(e) => {
+                      e.stopPropagation?.();
+                      handleRemoveExercise(ex.id);
+                    }}
+                  >
+                    <Text style={exerciseBoxStyles.removePillText}>Quitar</Text>
+                  </Pressable>
+                </Pressable>
+              );
+            })}
+
+            <Pressable
+              style={[exerciseBoxStyles.selectButton, { marginTop: 8 }]}
+              onPress={openExercisePicker}
+            >
+              <Text style={exerciseBoxStyles.selectButtonText}>
+                Añadir / modificar ejercicios
+              </Text>
+            </Pressable>
+          </>
+        )}
       </View>
 
       <View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>
@@ -518,5 +572,78 @@ const pickerStyles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: "#111827",
+  },
+});
+
+const exerciseBoxStyles = StyleSheet.create({
+  container: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: "#eef2ff",
+  },
+  title: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1d4ed8",
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: "#4b5563",
+    marginBottom: 8,
+  },
+  selectButton: {
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: "#f97316",
+    alignItems: "center",
+    marginTop: 4,
+  },
+  selectButtonText: {
+    color: "#ffffff",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginTop: 6,
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  cardMeta: {
+    fontSize: 12,
+    color: "#6b7280",
+    marginTop: 2,
+  },
+  cardType: {
+    fontSize: 11,
+    color: "#6b21a8",
+    marginTop: 2,
+  },
+  removePill: {
+    marginLeft: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    backgroundColor: "#f9fafb",
+  },
+  removePillText: {
+    fontSize: 12,
+    color: "#6b7280",
+    fontWeight: "600",
   },
 });
