@@ -4,7 +4,7 @@ import { View, Text, TextInput, Pressable, Platform, ActivityIndicator, ScrollVi
 import { supabase } from "../lib/supabase";
 import { useUser } from "../contexts/UserContexts";
 import { styles as baseStyles } from "./styles";
-import { createTraining } from "../lib/queries";
+import { createTraining, getUserExercises } from "../lib/queries";
 import { useRouter } from "expo-router";
 
 
@@ -57,14 +57,11 @@ export function TrainingCreator({ onClose, onCreated, onGoToExercisesTab }) {
 
   const loadExercises = async () => {
     setLoadingExercises(true);
-    const { data, error } = await supabase
-      .from("exercises")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const { data, error } = await getUserExercises();
 
-    if (!error && data) {
-      setAllExercises(data);
-    }
+    if (error) return;
+    setAllExercises(data);
+
     setLoadingExercises(false);
   };
 
@@ -121,12 +118,11 @@ export function TrainingCreator({ onClose, onCreated, onGoToExercisesTab }) {
         duration: isNaN(durationNum) ? null : durationNum,
         players: isNaN(playersNum) ? null : playersNum,
         court: courtValue || null,
-        description: description.trim() || null, // OJO: columna con typo
-        exercises: selectedExerciseIds.length > 0 ? selectedExerciseIds : null,                          // de momento vacío
+        description: description.trim() || null, // OJO: columna con typo                      // de momento vacío
         created_by: user?.id || null,
       };
 
-      const { error } = await createTraining(payload);
+      const { error } = await createTraining({training: payload, exercises: selectedExerciseIds});
 
       if (error) throw error;
 
@@ -350,7 +346,7 @@ export function TrainingCreator({ onClose, onCreated, onGoToExercisesTab }) {
       <View style={exerciseBoxStyles.container}>
         <Text style={exerciseBoxStyles.title}>Ejercicios seleccionados</Text>
 
-        {selectedExercises.length === 0 ? (
+        {selectedExerciseIds.length === 0 ? (
           <>
             <Text style={exerciseBoxStyles.subtitle}>
               Todavía no has añadido ejercicios a este entrenamiento.

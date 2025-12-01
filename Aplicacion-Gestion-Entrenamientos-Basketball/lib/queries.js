@@ -294,7 +294,7 @@ export async function getUserExercises() {
   return { data: (data || []).map((d) => d.exercises), error: null};
 }
 
-export async function createTraining(training) {
+export async function createTraining({training, exercises}) {
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) throw userError || new Error("Usuario no autenticado");
   
@@ -305,17 +305,26 @@ export async function createTraining(training) {
   .from("trainings")
   .insert([{id: trainingId, ...training}]);
   
-  if (error) {
-    return {error: error};
-  }
+  if (error) return {error: error};
   
   // Relacion en users_teams
   const { error: linkError } = await supabase
     .from("users_trainings")
     .insert([{ user_id: user.id, training_id: trainingId }]);
 
-  if (linkError) {
-    return { error: linkError};
+  if (linkError) return { error: linkError};
+
+  if (exercises.length > 0) {
+    // insert in teams_players
+    const rows = exercises.map(exerciseId => ({
+      training_id: trainingId,
+      exercise_id: exerciseId,
+    }));
+    const { error: teRelationError } = await supabase
+    .from("trainings_exercises")
+    .insert(rows);
+
+    if (teRelationError) return {error: teRelationError};
   }
 
   return {error: null};
@@ -338,11 +347,14 @@ export async function getUserTrainings() {
       court,
       description,
       created_at,
-      exercises,
       team_id,
       team:team_id ( name ),
       created_by,
-      creator:created_by ( username )
+      creator:created_by ( username ),
+      trainings_exercises (
+        exercise_id,
+        exercises (*)
+      )
     )
   `)
   .eq("user_id", user.id)
@@ -353,5 +365,19 @@ export async function getUserTrainings() {
     return {data: null, error: error};
   }
 
-  return { data: (data || []).map((d) => d.trainings), error: null};
+  return {
+    data: (data || []).map((row) => {
+      const training = row.trainings;
+
+      const exercises =
+        training.trainings_exercises?.map((te) => te.exercises) || [];
+
+      return {
+        ...training,
+        exercises,  // aquí ya tienes un array plano solo con ejercicios
+      };
+    }),
+    error: null,
+  };
+
 }

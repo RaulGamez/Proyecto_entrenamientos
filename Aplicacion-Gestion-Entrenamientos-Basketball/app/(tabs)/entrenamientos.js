@@ -128,20 +128,13 @@ export default function Entrenamientos() {
   );
 
   const renderTrainingCard = ({ item }) => {
-    const courtLabel = item.court_label || "Sin pista";
+    const courtLabel = item.court || "Sin pista";
     const players = item.players || "-";
     const duration = item.duration ? `${item.duration} min` : "-";
     
     const coverSource = item.cover_url
         ? { uri: item.cover_url }
         : require("../../img/train.jpg");   
-    
-    // lista de ejercicios de este entrenamiento, a partir de item.exercises (array de ids)
-    const exerciseList = Array.isArray(item.exercises)
-      ? item.exercises
-          .map((id) => exercisesById[id])
-          .filter(Boolean)
-      : [];
 
     const goToDetail = () => {
       router.push({
@@ -161,7 +154,7 @@ export default function Entrenamientos() {
             <View style={styles.trainingImageOverlay}>
                 <View style={styles.teamChip}>
                 <Text style={styles.teamChipText}>
-                    {item.team_name || "Sin equipo"}
+                    {item.team? item.team.name : "Sin equipo"}
                 </Text>
                 </View>
                 <Text style={styles.dateText}>{item.date}</Text>
@@ -190,12 +183,12 @@ export default function Entrenamientos() {
         {/* Ejercicios */}
         <Text style={styles.sectionLabel}>Ejercicios del entrenamiento:</Text>
         <View style={styles.exercisesBox}>
-          {exerciseList.length === 0 ? (
+          {item.exercises.length === 0 ? (
             <Text style={styles.exercisesText}>
               No hay ejercicios añadidos
             </Text>
           ) : (
-            exerciseList.map((ex) => (
+            item.exercises.map((ex) => (
               <Text key={ex.id} style={styles.exercisesText}>
                 • {ex.name || "Ejercicio"}
                 {ex.duration ? ` (${ex.duration} min)` : ""}
