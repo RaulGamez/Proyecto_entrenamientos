@@ -136,9 +136,9 @@ export default function Entrenamientos() {
         ? { uri: item.cover_url }
         : require("../../img/train.jpg");   
     
-    // lista de ejercicios de este entrenamiento, a partir de item.exercices (array de ids)
-    const exerciseList = Array.isArray(item.exercices)
-      ? item.exercices
+    // lista de ejercicios de este entrenamiento, a partir de item.exercises (array de ids)
+    const exerciseList = Array.isArray(item.exercises)
+      ? item.exercises
           .map((id) => exercisesById[id])
           .filter(Boolean)
       : [];

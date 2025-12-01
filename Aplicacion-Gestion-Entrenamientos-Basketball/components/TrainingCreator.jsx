@@ -122,7 +122,7 @@ export function TrainingCreator({ onClose, onCreated, onGoToExercisesTab }) {
         players: isNaN(playersNum) ? null : playersNum,
         court: courtValue || null,
         description: description.trim() || null, // OJO: columna con typo
-        exercices: selectedExerciseIds.length > 0 ? selectedExerciseIds : null,                          // de momento vacío
+        exercises: selectedExerciseIds.length > 0 ? selectedExerciseIds : null,                          // de momento vacío
         created_by: user?.id || null,
       };
 

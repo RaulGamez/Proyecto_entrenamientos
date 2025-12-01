@@ -68,8 +68,8 @@ export default function EditTraining() {
         setDescription(data.description || "");
 
         // ids de ejercicios guardados
-        if (Array.isArray(data.exercices)) {
-          setSelectedExerciseIds(data.exercices);
+        if (Array.isArray(data.exercises)) {
+          setSelectedExerciseIds(data.exercises);
         } else {
           setSelectedExerciseIds([]);
         }
@@ -134,7 +134,7 @@ export default function EditTraining() {
       const payload = {
         date: date.trim(),
         description: description.trim() || null,
-        exercices: selectedExerciseIds.length > 0 ? selectedExerciseIds : null,
+        exercises: selectedExerciseIds.length > 0 ? selectedExerciseIds : null,
       };
 
       const durNum = Number(duration);
