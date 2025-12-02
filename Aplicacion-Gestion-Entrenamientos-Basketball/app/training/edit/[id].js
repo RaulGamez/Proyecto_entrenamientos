@@ -4,6 +4,7 @@ import {View,Text,TextInput,ScrollView,Pressable,ActivityIndicator,Alert,Platfor
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { supabase } from "../../../lib/supabase";
 import { teamStyles as styles } from "../../../components/stylesTeams";
+import { updateTraining, getUserExercises } from "../../../lib/queries";
 
 const COURT_OPTIONS = [
   { value: "full", label: "Pista completa" },
@@ -82,14 +83,11 @@ export default function EditTraining() {
   // Cargar todos los ejercicios
   const loadExercises = async () => {
     setLoadingExercises(true);
-    const { data, error } = await supabase
-      .from("exercises")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const { data, error } = await getUserExercises();
 
-    if (!error && data) {
-      setAllExercises(data);
-    }
+    if (error) return;
+
+    setAllExercises(data);
     setLoadingExercises(false);
   };
 
@@ -132,9 +130,9 @@ export default function EditTraining() {
       }
 
       const payload = {
+        id: id,
         date: date.trim(),
         description: description.trim() || null,
-        exercises: selectedExerciseIds.length > 0 ? selectedExerciseIds : null,
       };
 
       const durNum = Number(duration);
@@ -145,18 +143,8 @@ export default function EditTraining() {
 
       payload.court = courtValue || null;
 
-      const { data, error } = await supabase
-        .from("trainings")
-        .update(payload)
-        .eq("id", id)
-        .select("id")
-        .maybeSingle();
-
+      const { error } = await updateTraining({training: payload, exercises: selectedExerciseIds});
       if (error) throw error;
-      if (!data)
-        throw new Error(
-          "No se encontró el entrenamiento o no tienes permisos para editarlo."
-        );
 
       Alert.alert(
         "✅ Entrenamiento actualizado",

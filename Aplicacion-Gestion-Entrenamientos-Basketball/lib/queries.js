@@ -300,14 +300,14 @@ export async function createTraining({training, exercises}) {
   
   const trainingId = uuidv4();
   
-  // Creamos el equipo
+  // Creamos el entrenamiento
   const { error } = await supabase
   .from("trainings")
   .insert([{id: trainingId, ...training}]);
   
   if (error) return {error: error};
   
-  // Relacion en users_teams
+  // Relacion en users_trainings
   const { error: linkError } = await supabase
     .from("users_trainings")
     .insert([{ user_id: user.id, training_id: trainingId }]);
@@ -315,7 +315,7 @@ export async function createTraining({training, exercises}) {
   if (linkError) return { error: linkError};
 
   if (exercises.length > 0) {
-    // insert in teams_players
+    // insert in trainings_exercises
     const rows = exercises.map(exerciseId => ({
       training_id: trainingId,
       exercise_id: exerciseId,
@@ -380,4 +380,53 @@ export async function getUserTrainings() {
     error: null,
   };
 
+}
+
+export async function updateTraining({training, exercises}) {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) throw userError || new Error("Usuario no autenticado");
+  
+  const { error } = await supabase
+  .from("trainings")
+  .update(training)
+  .eq("id", training.id)
+  .single();
+  
+  if (error) return {error: error};
+
+  //obtenemos las relaciones actuales del entrenamiento
+  const { data: currentExercises, error: currentError } = await supabase
+  .from("trainings_exercises")
+  .select("*")
+  .eq("training_id", training.id);
+
+  const currentIds = currentExercises.map((e) => e.id);
+  const deleteIds = currentIds.filter(id => !exercises.includes(id));
+  const insertIds = exercises.filter(id => !currentIds.includes(id));
+
+  if (deleteIds.length > 0) {
+    // Eliminamos las relaciones que no esten aqui dentro
+    const { error: deleteError } = await supabase
+    .from("trainings_exercises")
+    .delete()
+    .eq("training_id", training.id)
+    .in("exercise_id", deleteIds);
+
+    if (deleteError) return {error: deleteError};
+  }
+
+  if (insertIds.length > 0) {
+    // Eliminamos relaciones por ejercicios deseleccionados
+    const insertRows = insertIds.map(insertId => ({
+      training_id: training.id,
+      exercise_id: insertId,
+    }));
+    const { error: insertError } = await supabase
+    .from("trainings_exercises")
+    .insert(insertRows);
+
+    if (insertError) return {error: insertError};
+  }
+
+  return {error: null};
 }

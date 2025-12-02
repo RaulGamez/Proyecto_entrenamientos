@@ -134,7 +134,7 @@ export default function Entrenamientos() {
     
     const coverSource = item.cover_url
         ? { uri: item.cover_url }
-        : require("../../img/train.jpg");   
+        : require("../../img/train.jpg");
 
     const goToDetail = () => {
       router.push({
