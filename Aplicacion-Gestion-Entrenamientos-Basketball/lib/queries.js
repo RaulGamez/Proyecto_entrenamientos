@@ -386,23 +386,36 @@ export async function updateTraining({training, exercises}) {
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) throw userError || new Error("Usuario no autenticado");
   
-  const { error } = await supabase
-  .from("trainings")
-  .update(training)
-  .eq("id", training.id)
-  .single();
+  const newIds = (exercises || []).filter(
+    (id) => typeof id === "string" && id.trim() !== ""
+  );
+
+  const { error: updateError } = await supabase
+    .from("trainings")
+    .update({
+      date: training.date,
+      duration: training.duration,
+      players: training.players,
+      court: training.court,
+      description: training.description,
+    })
+    .eq("id", training.id);
   
-  if (error) return {error: error};
+  if (updateError) return {error: updateError};
 
   //obtenemos las relaciones actuales del entrenamiento
   const { data: currentExercises, error: currentError } = await supabase
   .from("trainings_exercises")
-  .select("*")
+  .select("exercise_id")
   .eq("training_id", training.id);
+  if (currentError) return { error: currentError };
 
-  const currentIds = currentExercises.map((e) => e.id);
-  const deleteIds = currentIds.filter(id => !exercises.includes(id));
-  const insertIds = exercises.filter(id => !currentIds.includes(id));
+  const currentIds = (currentExercises || [])
+    .map((e) => e.exercise_id)
+    .filter((id) => typeof id === "string" && id.trim() !== "");
+
+  const deleteIds = currentIds.filter((id) => !newIds.includes(id));
+  const insertIds = newIds.filter((id) => !currentIds.includes(id));
 
   if (deleteIds.length > 0) {
     // Eliminamos las relaciones que no esten aqui dentro

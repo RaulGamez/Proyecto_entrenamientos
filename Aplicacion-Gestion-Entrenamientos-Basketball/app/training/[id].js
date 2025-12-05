@@ -13,20 +13,45 @@ export default function TrainingDetail() {
   const [training, setTraining] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Cargar entrenamiento desde la tabla trainings
+  // Cargar entrenamiento + ejercicios
   useEffect(() => {
     if (!trainingId) return;
 
     (async () => {
+      setLoading(true);
+
       const { data, error } = await supabase
         .from("trainings")
-        .select("*")
+        .select(
+          `
+          id,
+          date,
+          duration,
+          players,
+          court,
+          description,
+          team:team_id ( name ),
+          trainings_exercises (
+            exercise_id,
+            exercises (
+              id,
+              name,
+              type,
+              duration,
+              players,
+              court,
+              description
+            )
+          )
+        `
+        )
         .eq("id", trainingId)
         .single();
 
       if (error) {
         console.log("Error loading training", error);
       }
+
       setTraining(data || null);
       setLoading(false);
     })();
@@ -82,15 +107,18 @@ export default function TrainingDetail() {
     );
   }
 
-  // Mapeo flexible de columnas según tu tabla
-  const date = training.date || training.training_date || "";
+  // ----- Mapeos -----
+  const date = training.date || "";
   const durationRaw =
     training.duration_minutes ??
     training.duration ??
     training.duration_minutos ??
     null;
   const playersRaw =
-    training.players_count ?? training.players ?? training.num_players ?? null;
+    training.players_count ??
+    training.players ??
+    training.num_players ??
+    null;
 
   const durationLabel = durationRaw != null ? `${durationRaw} min` : "-";
   const playersLabel =
@@ -108,13 +136,21 @@ export default function TrainingDetail() {
     }[courtValue] ?? "Sin pista");
 
   const teamName =
-    training.team_name || training.team || training.team_label || "Sin equipo";
+    training.team?.name ||
+    training.team_name ||
+    training.team_label ||
+    "Sin equipo";
 
   const description = training.description || "";
 
   const coverSource = training.cover_url
     ? { uri: training.cover_url }
     : require("../../img/train.jpg");
+
+  const exercises =
+    training.trainings_exercises?.map((te) => te.exercises).filter(Boolean) ||
+    [];
+
 
   return (
     <ScrollView style={styles.screen}>
@@ -205,16 +241,74 @@ export default function TrainingDetail() {
         </Text>
         <View
           style={{
-            marginTop: 8,
+            marginTop: 2,
             borderRadius: 10,
-            backgroundColor: "#f5f3ff",
-            padding: 12,
+            borderWidth: .4,
+            padding: 5,
           }}
         >
-          <Text style={{ color: "#4b5563", fontSize: 13 }}>
-            {description ||
-              "Aún no has añadido ejercicios."}
-          </Text>
+          {exercises.length === 0 ? (
+            <Text style={{ color: "#4b5563", fontSize: 13}}>
+              Aún no has añadido ejercicios a este entrenamiento.
+            </Text>
+          ) : (
+            exercises.map((ex) => {
+              const exDuration = ex.duration ? `${ex.duration} min` : "-";
+              const exPlayers =
+                ex.players != null && ex.players !== ""
+                  ? String(ex.players)
+                  : "-";
+              const exType = ex.type || "Ejercicio";
+              const exCourt = ex.court
+                ? {
+                    full: "Pista completa",
+                    half: "Media pista",
+                    quarter: "1/4 pista",
+                    none: "Sin pista",
+                  }[ex.court] || ex.court
+                : "Sin pista";
+
+              return (
+                <View
+                  key={ex.id}
+                  style={{
+                    backgroundColor: "#e9f4ffff",
+                    margin: 2,
+                    padding: 6,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: "#bec7e1ff",
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      fontWeight: "600",
+                      color: "#111827",
+                    }}
+                  >
+                    {ex.name}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: "#6b7280" }}>
+                    {exType} · {exDuration} · {exPlayers} jugadores ·{" "}
+                    {exCourt}
+                  </Text>
+                </View>
+              );
+            })
+          )}
+
+          {description ? (
+            <Text
+              style={{
+                marginTop: 10,
+                fontSize: 13,
+                color: "#4b5563",
+              }}
+            >
+              Notas del entrenamiento: {description}
+            </Text>
+          ) : null}
         </View>
 
         {/* ACCIONES: Editar / Borrar */}

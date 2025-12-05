@@ -34,18 +34,37 @@ export default function EditTraining() {
   const [selectedExerciseIds, setSelectedExerciseIds] = useState([]);
   const [selectedExercises, setSelectedExercises] = useState([]);
 
-  // Cargar entrenamiento inicial
+   // 1) Cargar entrenamiento + relaciones con ejercicios
   useEffect(() => {
     (async () => {
+      setLoading(true);
+
       const { data, error } = await supabase
         .from("trainings")
-        .select("*")
+        .select(
+          `
+          id,
+          date,
+          duration,
+          players,
+          court,
+          description,
+          trainings_exercises (
+            exercise_id
+          )
+        `
+        )
         .eq("id", id)
         .single();
 
       if (error) {
+        console.log("Error cargando entrenamiento", error);
         setError("No se pudo cargar el entrenamiento");
-      } else if (data) {
+        setLoading(false);
+        return;
+      }
+
+      if (data) {
         setDate(data.date || "");
         setDuration(
           data.duration?.toString?.() ||
@@ -68,9 +87,11 @@ export default function EditTraining() {
         setCourtLabel(courtOpt?.label || "");
         setDescription(data.description || "");
 
-        // ids de ejercicios guardados
-        if (Array.isArray(data.exercises)) {
-          setSelectedExerciseIds(data.exercises);
+        // IDs de ejercicios asociados a este entrenamiento
+        if (Array.isArray(data.trainings_exercises)) {
+          setSelectedExerciseIds(
+            data.trainings_exercises.map((te) => te.exercise_id)
+          );
         } else {
           setSelectedExerciseIds([]);
         }
@@ -80,18 +101,19 @@ export default function EditTraining() {
     })();
   }, [id]);
 
-  // Cargar todos los ejercicios
-  const loadExercises = async () => {
-    setLoadingExercises(true);
-    const { data, error } = await getUserExercises();
+  // 2) Cargar todos los ejercicios del usuario al entrar en la pantalla
+  useEffect(() => {
+    (async () => {
+      setLoadingExercises(true);
+      const { data, error } = await getUserExercises();
+      if (!error && data) {
+        setAllExercises(data);
+      }
+      setLoadingExercises(false);
+    })();
+  }, []);
 
-    if (error) return;
-
-    setAllExercises(data);
-    setLoadingExercises(false);
-  };
-
-  // Sincronizar tarjetas seleccionadas a partir de los ids
+  // 3) Sincronizar tarjetas seleccionadas a partir de los ids y la lista completa
   useEffect(() => {
     if (allExercises.length > 0) {
       setSelectedExercises(
@@ -119,6 +141,11 @@ export default function EditTraining() {
     );
   };
 
+  // quitar un ejercicio de la lista seleccionada
+  const handleRemoveExercise = (idEx) => {
+    setSelectedExerciseIds((prev) => prev.filter((e) => e !== idEx));
+  };
+  
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -156,11 +183,6 @@ export default function EditTraining() {
     } finally {
       setSaving(false);
     }
-  };
-
-  // quitar un ejercicio de la lista seleccionada
-  const handleRemoveExercise = (idEx) => {
-    setSelectedExerciseIds((prev) => prev.filter((e) => e !== idEx));
   };
 
   if (loading)
