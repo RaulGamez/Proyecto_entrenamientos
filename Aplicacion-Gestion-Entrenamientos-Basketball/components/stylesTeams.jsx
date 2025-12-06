@@ -46,7 +46,6 @@ export const teamStyles = StyleSheet.create({
   // ---- Card de equipo
   teamCard: {
     backgroundColor: "#fff",
-    marginHorizontal: 16,
     marginVertical: 8,
     borderRadius: 14,
     overflow: "hidden",
@@ -63,21 +62,17 @@ export const teamStyles = StyleSheet.create({
   },
   teamTitleWrap: { padding: 12 },
   teamTitle: { color: "#fff", fontSize: 16, fontWeight: "800" },
+  teamTitle2: { color: "#000", fontSize: 14, marginLeft: 12},
   teamSubtitle: { color: "#e5e7eb", marginTop: 2 },
 
   metricsRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    paddingVertical: 14,
+    alignItems: "right",
+    paddingVertical: 10,
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderColor: "#f1f5f9",
+    color: "#111827",
   },
-  metricItem: { alignItems: "center", width: "33%" },
-  metricIcon: { fontSize: 18, marginBottom: 4 },
-  metricLabel: { color: "#6b7280", fontSize: 12 },
-  metricValue: { color: "#111827", fontWeight: "700", marginTop: 2 },
-
   cardFoot: { color: "#6b7280", fontSize: 11, paddingHorizontal: 12, paddingVertical: 10 },
 
   // ---- Formularios del creador
@@ -126,8 +121,13 @@ export const teamStyles = StyleSheet.create({
   playerRow: {
     paddingVertical: 10,
     paddingHorizontal: 12,
-    borderWidth: 1,
+    overflow: "hidden",
     borderColor: "#e5e7eb",
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
     borderRadius: 10,
     marginTop: 8,
     backgroundColor: "#fff",

@@ -3,16 +3,6 @@
 import { View, Text, TouchableOpacity, ImageBackground} from "react-native";
 import { teamStyles as styles } from "./stylesTeams";
 
-function Metric({ icon, label, value }) {
-  return (
-    <View style={styles.metricItem}>
-      <Text style={styles.metricIcon}>{icon}</Text>
-      <Text style={styles.metricLabel}>{label}</Text>
-      <Text style={styles.metricValue}>{value}</Text>
-    </View>
-  );
-}
-
 export function TeamCard({team, onPress}) {
     const formattedDate = new Date(team.created_at).toLocaleDateString("es-ES", {
         day: "numeric",
@@ -58,9 +48,7 @@ export function TeamCard({team, onPress}) {
         </ImageBackground>
 
         <View style={styles.metricsRow}>
-          <Metric icon="🏆" label="Posición" value={position} />
-          <Metric icon="🧑‍🤝‍🧑" label="Jugadores" value={players} />
-          <Metric icon="📈" label="% Victoria" value={winRate} />
+          <Text style={styles.teamTitle2}>🏀 {players} Jugadores</Text>
         </View>
       </View>
     </TouchableOpacity>

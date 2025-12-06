@@ -31,13 +31,13 @@ export function PlayerCard({player, onPress}) {
 
     return (
         <Pressable onPress={onPress} style={tstyles.playerRow}>
-            <View style={{ flex: 1 }}>
-            <Text style={{ fontWeight: "600" }}>
-                {player.number ? `#${player.number} ` : ""}{player.name}
-            </Text>
-            <Text style={{ color: "#6b7280", marginTop: 2 }}>
-                {formatPlayerMeta(player)}
-            </Text>
+            <View style={{ flex: 1}}>
+                <Text style={{ fontWeight: "700", fontSize: 16 }}>
+                    {player.number ? `#${player.number} ` : ""}{player.name}
+                </Text>
+                <Text style={{ color: "#6b7280", marginTop: 2 }}>
+                    {formatPlayerMeta(player)}
+                </Text>
             </View>
             {!!player.status && (
                 <Text

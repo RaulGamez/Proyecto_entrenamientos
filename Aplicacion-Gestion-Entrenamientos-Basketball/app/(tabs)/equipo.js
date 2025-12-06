@@ -1,5 +1,12 @@
 // app/(tabs)/equipo.js
-import { View, Text, FlatList, Pressable, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  FlatList,
+  Pressable,
+  ActivityIndicator,
+  StyleSheet,
+} from "react-native";
 import { useRouter, Stack, useFocusEffect } from "expo-router";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
@@ -13,6 +20,9 @@ import { PlayerCard } from "../../components/PlayerCard";
 
 export default function Teams() {
   const router = useRouter();
+
+  // Tabs: 'teams' | 'players'
+  const [activeTab, setActiveTab] = useState("teams");
 
   // BottomSheets
   const bsTeamsRef = useRef(null);
@@ -50,7 +60,7 @@ export default function Teams() {
     }, [loadTeams, loadPlayers])
   );
 
-  // Mapa id->nombre de equipos (depende de teams, así que va DENTRO del comp.)
+  // (por si lo necesitas en otros sitios)
   const teamNameById = useMemo(() => {
     const m = {};
     for (const t of teams) m[t.id] = t.name;
@@ -62,6 +72,35 @@ export default function Teams() {
   const openPlayerCreator = () => bsPlayersRef.current?.expand();
   const closePlayerCreator = () => bsPlayersRef.current?.close();
 
+  // === EMPTY STATES usando stylesTeams ===
+  const renderEmptyTeams = () => (
+    <View style={tstyles.emptyCard}>
+      <View style={tstyles.emptyIconCircle}>
+        <Text style={{ fontSize: 26 }}>🏀</Text>
+      </View>
+      <Text style={tstyles.emptyText}>Aún no has creado ningún equipo</Text>
+      <Pressable style={tstyles.primaryButton} onPress={openTeamsCreator}>
+        <Text style={tstyles.primaryButtonText}>
+          + Crear tu primer equipo
+        </Text>
+      </Pressable>
+    </View>
+  );
+
+  const renderEmptyPlayers = () => (
+    <View style={tstyles.emptyCard}>
+      <View style={tstyles.emptyIconCircle}>
+        <Text style={{ fontSize: 26 }}>👤</Text>
+      </View>
+      <Text style={tstyles.emptyText}>Aún no has creado ningún jugador</Text>
+      <Pressable style={tstyles.primaryButton} onPress={openPlayerCreator}>
+        <Text style={tstyles.primaryButtonText}>
+          + Crear tu primer jugador
+        </Text>
+      </Pressable>
+    </View>
+  );
+
   return (
     <View style={tstyles.screen}>
       <Stack.Screen
@@ -72,62 +111,117 @@ export default function Teams() {
         }}
       />
 
+      {/* Tabs como en entrenamientos.js */}
+      <View style={styles.tabsContainer}>
+        <Pressable
+          style={[
+            styles.tabButton,
+            activeTab === "teams" && styles.tabButtonActive,
+          ]}
+          onPress={() => setActiveTab("teams")}
+        >
+          <Text
+            style={[
+              styles.tabButtonText,
+              activeTab === "teams" && styles.tabButtonTextActive,
+            ]}
+          >
+            Mis Equipos
+          </Text>
+        </Pressable>
+
+        <Pressable
+          style={[
+            styles.tabButton,
+            activeTab === "players" && styles.tabButtonActive,
+          ]}
+          onPress={() => setActiveTab("players")}
+        >
+          <Text
+            style={[
+              styles.tabButtonText,
+              activeTab === "players" && styles.tabButtonTextActive,
+            ]}
+          >
+            Mis Jugadores
+          </Text>
+        </Pressable>
+      </View>
+
       {cardsLoading ? (
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <View
+          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+        >
           <ActivityIndicator size="large" color="#000" />
         </View>
       ) : (
-        <FlatList
-          data={teams}
-          keyExtractor={(team) => String(team.id)}
-          renderItem={({ item }) => (
-            <TeamCard team={item} onPress={() => router.push(`/team/${item.id}`)} />
-          )}
-          ListHeaderComponent={() => (
-            <View style={tstyles.listHeader}>
-              <Text style={tstyles.pageTabs}>
-                <Text style={tstyles.tabActive}>Plantilla</Text>
-                <Text style={tstyles.tabSpacer}>   </Text>
-                <Text style={tstyles.tabInactive}>Estadísticas</Text>
-              </Text>
-
-              <Text style={tstyles.sectionTitle}>
-                Mis Equipos <Text style={tstyles.sectionCount}>({teams.length})</Text>
-              </Text>
-
-              <View style={tstyles.headerActions}>
-                <Pressable style={tstyles.chip} onPress={openPlayerCreator}>
-                  <Text style={tstyles.chipText}>+ Jugador</Text>
-                </Pressable>
-                <Pressable style={[tstyles.chip, tstyles.chipDark]} onPress={openTeamsCreator}>
-                  <Text style={[tstyles.chipText, tstyles.chipTextDark]}>+ Equipo</Text>
+        <>
+          {/* TAB EQUIPOS */}
+          {activeTab === "teams" && (
+            <View style={{ flex: 1, paddingHorizontal: 16 }}>
+              <View style={styles.headerRow}>
+                <Text style={styles.headerTitle}>
+                  Mis equipos creados ({teams.length})
+                </Text>
+                <Pressable
+                  style={styles.smallCreateButton}
+                  onPress={openTeamsCreator}
+                >
+                  <Text style={styles.smallCreateButtonText}>+ Crear</Text>
                 </Pressable>
               </View>
-            </View>
-          )}
-          ListFooterComponent={() => (
-            <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
-              <Text style={tstyles.sectionTitle}>
-                Mis Jugadores <Text style={tstyles.sectionCount}>({players.length})</Text>
-              </Text>
 
-              {players.length === 0 ? (
-                <Text style={{ color: "#9ca3af", marginTop: 8 }}>
-                  Todavía no has creado jugadores
-                </Text>
+              {teams.length === 0 ? (
+                renderEmptyTeams()
               ) : (
-                players.map((p) => (
-                  <PlayerCard
-                    key={p.id}
-                    player={p}
-                    onPress={() => router.push(`../team/players/${p.id}`)}
+                <FlatList
+                  data={teams}
+                  keyExtractor={(team) => String(team.id)}
+                  renderItem={({ item }) => (
+                    <TeamCard
+                    team={item}
+                    onPress={() => router.push(`../team/${item.id}`)}
                   />
-                ))
+                  )}
+                  contentContainerStyle={{ paddingVertical: 12 }}
+                />
               )}
             </View>
           )}
-          contentContainerStyle={{ paddingBottom: 24 }}
-        />
+
+          {/* TAB JUGADORES */}
+          {activeTab === "players" && (
+            <View style={{ flex: 1, paddingHorizontal: 16 }}>
+              <View style={styles.headerRow}>
+                <Text style={styles.headerTitle}>
+                  Mis jugadores creados ({players.length})
+                </Text>
+                <Pressable
+                  style={styles.smallCreateButton}
+                  onPress={openPlayerCreator}
+                >
+                  <Text style={styles.smallCreateButtonText}>+ Crear</Text>
+                </Pressable>
+              </View>
+
+              {players.length === 0 ? (
+                renderEmptyPlayers()
+              ) : (
+                <FlatList
+                  data={players}
+                  keyExtractor={(p) => String(p.id)}
+                  renderItem={({ item }) => (
+                    <PlayerCard
+                      player={item}
+                      onPress={() => router.push(`../team/players/${item.id}`)}
+                    />
+                  )}
+                  contentContainerStyle={{ paddingVertical: 12 }}
+                />
+              )}
+            </View>
+          )}
+        </>
       )}
 
       {/* BottomSheet: crear equipo */}
@@ -163,7 +257,7 @@ export default function Teams() {
             onClose={closePlayerCreator}
             onCreated={async () => {
               await loadPlayers();   // refresca la lista
-              closePlayerCreator(); // cierra el sheet
+              closePlayerCreator();  // cierra el sheet
             }}
           />
         </BottomSheetScrollView>
@@ -171,3 +265,58 @@ export default function Teams() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  // Tabs (igual estilo que entrenamientos.js)
+  tabsContainer: {
+    flexDirection: "row",
+    backgroundColor: "#e5e7eb",
+    padding: 4,
+    borderRadius: 999,
+    marginBottom: 16,
+    marginTop: 8,
+    marginHorizontal: 16,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 999,
+    alignItems: "center",
+  },
+  tabButtonActive: {
+    backgroundColor: "#ffffff",
+  },
+  tabButtonText: {
+    fontSize: 14,
+    color: "#6b7280",
+    fontWeight: "500",
+  },
+  tabButtonTextActive: {
+    color: "#111827",
+  },
+
+  // Header + botón crear (como entrenamientos.js)
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+    marginTop: 4,
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111827",
+  },
+  smallCreateButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "#111827",
+  },
+  smallCreateButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 13,
+  },
+});
