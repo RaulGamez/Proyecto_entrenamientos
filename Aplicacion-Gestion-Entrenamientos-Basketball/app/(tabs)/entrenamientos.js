@@ -151,7 +151,6 @@ export default function Entrenamientos() {
                 style={styles.trainingImage}
                 imageStyle={styles.trainingImageStyle}
             >
-            <View style={styles.trainingImageDim} />
             <View style={styles.trainingImageOverlay}>
                 <View style={styles.teamChip}>
                 <Text style={styles.teamChipText}>
@@ -165,17 +164,17 @@ export default function Entrenamientos() {
 
         {/* Stats 3 columnas */}
         <View style={styles.statsRow}>
-          <View style={[styles.statCard, { backgroundColor: "#def6feff" }]}>
+          <View style={[styles.statCard, { backgroundColor: "#dbf7fbff" }]}>
             <Text style={styles.statLabel}>Duración</Text>
             <Text style={styles.statValue}>{duration}</Text>
           </View>
 
-          <View style={[styles.statCard, { backgroundColor: "#def6feff" }]}>
+          <View style={[styles.statCard, { backgroundColor: "#dbf7fbff" }]}>
             <Text style={styles.statLabel}>Jugadores</Text>
             <Text style={styles.statValue}>{players}</Text>
           </View>
 
-          <View style={[styles.statCard, { backgroundColor: "#def6feff" }]}>
+          <View style={[styles.statCard, { backgroundColor: "#dbf7fbff" }]}>
             <Text style={styles.statLabel}>Pista</Text>
             <Text style={styles.statValue}>{courtLabel}</Text>
           </View>
@@ -186,7 +185,7 @@ export default function Entrenamientos() {
         <View style={styles.exercisesBox}>
           {item.exercises.length === 0 ? (
             <Text style={styles.exercisesText}>
-              No hay ejercicios asignados
+              No hay ejercicios añadidos
             </Text>
           ) : (
             item.exercises.map((ex) => (
@@ -256,17 +255,17 @@ export default function Entrenamientos() {
         </View>
 
         <View style={styles.statsRow}>
-            <View style={[styles.statCard, { backgroundColor: "#def6feff" }]}>
+            <View style={[styles.statCard, { backgroundColor: "#dbf7fbff" }]}>
             <Text style={styles.statLabel}>Duración</Text>
             <Text style={styles.statValue}>{duration}</Text>
             </View>
 
-            <View style={[styles.statCard, { backgroundColor: "#def6feff" }]}>
+            <View style={[styles.statCard, { backgroundColor: "#dbf7fbff" }]}>
             <Text style={styles.statLabel}>Jugadores</Text>
             <Text style={styles.statValue}>{players}</Text>
             </View>
 
-            <View style={[styles.statCard, { backgroundColor: "#def6feff" }]}>
+            <View style={[styles.statCard, { backgroundColor: "#dbf7fbff" }]}>
             <Text style={styles.statLabel}>Pista</Text>
             <Text style={styles.statValue}>{courtLabel}</Text>
             </View>
@@ -498,12 +497,12 @@ const styles = StyleSheet.create({
 
   // tarjeta de entrenamiento
   trainingCard: {
-    backgroundColor: "#ffffffff",
+    backgroundColor: "#ffffff",
     borderRadius: 18,
     overflow: "hidden",
     marginBottom: 16,
-    borderWidth: 1.5,
-    borderColor: "#3789acff",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
   },
   trainingImageWrapper: {
     position: "relative",
@@ -519,16 +518,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     },
-  trainingImageDim: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.25)", // negro difuminado
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-  },
   trainingImageOverlay: {
     position: "absolute",
     left: 10,
@@ -567,8 +556,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#a0d0e0ff",
   },
   statIcon: {
     fontSize: 16,
@@ -595,8 +582,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 8,
     marginHorizontal: 10,
-    borderWidth: 1.5,
-    borderColor: "#bee3f6ff",
+    borderColor: "#98d5f4ff",
+    borderWidth: 1,
     borderRadius: 10,
     padding: 10,
   },
