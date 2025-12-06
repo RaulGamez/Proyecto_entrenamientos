@@ -163,6 +163,54 @@ export function TrainingCreator({ onClose, onCreated, onGoToExercisesTab }) {
     plannedDuration > 0
       ? Math.min((totalExercisesMinutes / plannedDuration) * 100, 100)
       : 0;
+  // --- Jugadores ---
+  const trainingPlayers = Number(players) || 0;
+  const maxExercisePlayers = selectedExercises.reduce(
+    (max, ex) => {
+      const val = Number(ex.players);
+      if (!val || isNaN(val)) return max;
+      return Math.max(max, val);
+    },
+    0
+  );
+
+  const hasPlayersInfo = trainingPlayers > 0 && selectedExercises.length > 0;
+  const playersLack =
+    hasPlayersInfo && maxExercisePlayers > trainingPlayers;
+  const playersExtra =
+    hasPlayersInfo &&
+    !playersLack &&
+    trainingPlayers - maxExercisePlayers >= 3;
+
+  // --- Pista ---
+  const COURT_RANK = { none: 0, quarter: 1, half: 2, full: 3 };
+
+  const trainingCourtRank = COURT_RANK[courtValue] ?? null;
+  const maxRequiredCourtRank = selectedExercises.reduce((max, ex) => {
+    const r = COURT_RANK[ex.court] ?? 0;
+    return Math.max(max, r);
+  }, 0);
+
+  const hasCourtInfo =
+    trainingCourtRank !== null && selectedExercises.length > 0;
+
+  const courtLack =
+    hasCourtInfo && maxRequiredCourtRank > trainingCourtRank;
+
+  const COURT_LABELS = {
+    none: "Sin pista",
+    quarter: "1/4 pista",
+    half: "Media pista",
+    full: "Pista completa",
+  };
+
+  const maxRequiredCourtKey = Object.entries(COURT_RANK).find(
+    ([key, val]) => val === maxRequiredCourtRank
+  )?.[0];
+  const maxRequiredCourtLabel =
+    COURT_LABELS[maxRequiredCourtKey] || "pista";
+  const trainingCourtLabel =
+    COURT_LABELS[courtValue] || COURT_LABELS.none;
 
   // ----- MODO PICKER DE EJERCICIOS -----
   if (exercisePickerOpen) {
@@ -396,7 +444,7 @@ export function TrainingCreator({ onClose, onCreated, onGoToExercisesTab }) {
               />
             </View>
 
-            {/* Avisos suaves */}
+            {/* Avisos tiempo ejercicios */}
             {isOver && (
               <Text style={exerciseBoxStyles.timeWarning}>
                 Te pasas del tiempo planificado por {Math.abs(remainingMinutes)} min.
@@ -407,6 +455,28 @@ export function TrainingCreator({ onClose, onCreated, onGoToExercisesTab }) {
                 Aún te quedan {remainingMinutes} min libres en la sesión.
               </Text>
             )}
+            {/* Avisos de jugadores */}
+            {playersLack && (
+              <Text style={exerciseBoxStyles.timeWarning}>
+                Algunos ejercicios requieren hasta {maxExercisePlayers} jugadores
+                y has indicado {trainingPlayers}. Te faltan jugadores.
+              </Text>
+            )}
+            {!playersLack && playersExtra && (
+              <Text style={exerciseBoxStyles.timeHint}>
+                El ejercicio con más participación usa {maxExercisePlayers} jugadores
+                y has indicado {trainingPlayers}. Tendrás gente de sobra.
+              </Text>
+            )}
+
+            {/* Avisos de pista */}
+            {courtLack && (
+              <Text style={exerciseBoxStyles.timeWarning}>
+                Hay ejercicios que necesitan al menos {maxRequiredCourtLabel} y
+                has indicado {trainingCourtLabel}.
+              </Text>
+            )}
+
           </View>
         ) : plannedDuration > 0 ? (
           <Text style={exerciseBoxStyles.timeHint}>
