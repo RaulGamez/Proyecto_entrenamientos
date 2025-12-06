@@ -2,7 +2,7 @@ import { StyleSheet } from "react-native";
 
 export const teamStyles = StyleSheet.create({
   // Contenedor específico de la pantalla de equipos
-  screen: { flex: 1, backgroundColor: "#f6f7fb" },
+  screen: { flex: 1, backgroundColor: "#f6f7fb"},
 
   // ---- Header (Plantilla / Estadísticas, chips, etc.)
   pageTabs: { marginTop: 8, alignSelf: "center", color: "#1f2937" },
@@ -134,6 +134,41 @@ export const teamStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-  }
+  },
+
+  // ---- Empty states (sin equipos / sin jugadores)
+  emptyCard: {
+    marginTop: 12,
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: "#d1d1d1ff",
+    alignItems: "center",
+    gap: 12,
+  },
+  emptyIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#edeff2ff",
+  },
+  emptyText: {
+    color: "#4b5563",
+    fontSize: 14,
+  },
+  primaryButton: {
+    marginTop: 8,
+    borderRadius: 999,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    backgroundColor: "#edeff2ff",
+  },
+  primaryButtonText: {
+    color: "#000",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+
 
 });

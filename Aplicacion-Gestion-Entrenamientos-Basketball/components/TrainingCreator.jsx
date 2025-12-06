@@ -6,6 +6,7 @@ import { useUser } from "../contexts/UserContexts";
 import { styles as baseStyles } from "./styles";
 import { createTraining, getUserExercises } from "../lib/queries";
 import { useRouter } from "expo-router";
+import { ExerciseCreator } from "./ExerciseCreator";
 
 
 const COURT_OPTIONS = [
@@ -81,6 +82,7 @@ export function TrainingCreator({ onClose, onCreated, onGoToExercisesTab }) {
     if (allExercises.length === 0) {
       await loadExercises();
     }
+    setCreatingExercise(false);
     setExercisePickerOpen(true);
   };
 
@@ -221,126 +223,168 @@ export function TrainingCreator({ onClose, onCreated, onGoToExercisesTab }) {
           Seleccionados: {selectedExerciseIds.length}
         </Text>
 
-        {loadingExercises ? (
-          <ActivityIndicator style={{ marginTop: 16 }} />
-        ) : allExercises.length === 0 ? (
-          <View style={{ marginTop: 12 }}>
-            <Text style={{ color: "#4b5563", fontSize: 13 }}>
-              Aún no has creado ningún ejercicio.
-            </Text>
-            {onGoToExercisesTab ? (
-              <Pressable
-                style={[baseStyles.darkButton, { marginTop: 10 }]}
-                onPress={onGoToExercisesTab}
-              >
-                <Text style={baseStyles.darkText}>
-                  Ir a “Mis Ejercicios”
-                </Text>
-              </Pressable>
-            ) : null}
-          </View>
+        {creatingExercise ? (
+          // ----- MODO CREAR NUEVO EJERCICIO -----
+          <ExerciseCreator
+            onClose={() => setCreatingExercise(false)}
+            onCreated={async () => {
+              // recargamos ejercicios y volvemos a la lista
+              await loadExercises();
+              setCreatingExercise(false);
+            }}
+            onGoToBoard={() => {
+              // opcional, mismo comportamiento que en entrenamientos.js
+              router.push("/pizarra");
+            }}
+          />
         ) : (
-          allExercises.map((item) => {
-            const selected = selectedExerciseIds.includes(item.id);
-            const durationLabel = item.duration
-              ? `${item.duration} min`
-              : "-";
-            const playersLabel =
-              item.players != null && item.players !== ""
-                ? String(item.players)
-                : "-";
-            const courtLabel = item.court
-              ? {
-                  full: "Pista completa",
-                  half: "Media pista",
-                  quarter: "1/4 pista",
-                  none: "Sin pista",
-                }[item.court] || item.court
-              : "Sin pista";
-            const typeLabel = item.type || "Ejercicio";
+          // ----- MODO LISTA / PICKER -----
+          <>
+            {loadingExercises ? (
+              <ActivityIndicator style={{ marginTop: 16 }} />
+            ) : allExercises.length === 0 ? (
+              <View style={{ marginTop: 12 }}>
+                <Text style={{ color: "#4b5563", fontSize: 13 }}>
+                  Aún no has creado ningún ejercicio.
+                </Text>
 
-            return (
-              <Pressable
-                key={item.id}
-                onPress={() => toggleExercise(item.id)}
-                style={[
-                  pickerStyles.card,
-                  selected && pickerStyles.cardSelected,
-                ]}
-              >
-                <View
-                  style={{
-                    paddingHorizontal: 12,
-                    paddingTop: 10,
-                    paddingBottom: 6,
-                  }}
+                {onGoToExercisesTab ? (
+                  <Pressable
+                    style={[baseStyles.darkButton, { marginTop: 10 }]}
+                    onPress={onGoToExercisesTab}
+                  >
+                    <Text style={baseStyles.darkText}>
+                      Ir a “Mis Ejercicios”
+                    </Text>
+                  </Pressable>
+                ) : null}
+
+                {/* botón para crear ejercicio directamente */}
+                <Pressable
+                  style={[baseStyles.darkButton, { marginTop: 10 }]}
+                  onPress={() => setCreatingExercise(true)}
                 >
-                  <Text
-                    style={{
-                      fontSize: 15,
-                      fontWeight: "700",
-                      color: "#111827",
-                    }}
-                  >
-                    {item.name}
+                  <Text style={baseStyles.darkText}>
+                    + Crear nuevo ejercicio
                   </Text>
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      color: "#6b7280",
-                    }}
-                  >
-                    {typeLabel}
-                  </Text>
-                </View>
+                </Pressable>
+              </View>
+            ) : (
+              <>
+                {allExercises.map((item) => {
+                  const selected = selectedExerciseIds.includes(item.id);
+                  const durationLabel = item.duration
+                    ? `${item.duration} min`
+                    : "-";
+                  const playersLabel =
+                    item.players != null && item.players !== ""
+                      ? String(item.players)
+                      : "-";
+                  const courtLabel = item.court
+                    ? {
+                        full: "Pista completa",
+                        half: "Media pista",
+                        quarter: "1/4 pista",
+                        none: "Sin pista",
+                      }[item.court] || item.court
+                    : "Sin pista";
+                  const typeLabel = item.type || "Ejercicio";
 
-                <View style={pickerStyles.statsRow}>
-                  <View style={pickerStyles.statCard}>
-                    <Text style={pickerStyles.statLabel}>Duración</Text>
-                    <Text style={pickerStyles.statValue}>
-                      {durationLabel}
-                    </Text>
-                  </View>
-                  <View style={pickerStyles.statCard}>
-                    <Text style={pickerStyles.statLabel}>Jugadores</Text>
-                    <Text style={pickerStyles.statValue}>
-                      {playersLabel}
-                    </Text>
-                  </View>
-                  <View style={pickerStyles.statCard}>
-                    <Text style={pickerStyles.statLabel}>Pista</Text>
-                    <Text style={pickerStyles.statValue}>
-                      {courtLabel}
-                    </Text>
-                  </View>
-                </View>
+                  return (
+                    <Pressable
+                      key={item.id}
+                      onPress={() => toggleExercise(item.id)}
+                      style={[
+                        pickerStyles.card,
+                        selected && pickerStyles.cardSelected,
+                      ]}
+                    >
+                      <View
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingTop: 10,
+                          paddingBottom: 6,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 15,
+                            fontWeight: "700",
+                            color: "#111827",
+                          }}
+                        >
+                          {item.name}
+                        </Text>
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            color: "#6b7280",
+                          }}
+                        >
+                          {typeLabel}
+                        </Text>
+                      </View>
+
+                      <View style={pickerStyles.statsRow}>
+                        <View style={pickerStyles.statCard}>
+                          <Text style={pickerStyles.statLabel}>Duración</Text>
+                          <Text style={pickerStyles.statValue}>
+                            {durationLabel}
+                          </Text>
+                        </View>
+                        <View style={pickerStyles.statCard}>
+                          <Text style={pickerStyles.statLabel}>Jugadores</Text>
+                          <Text style={pickerStyles.statValue}>
+                            {playersLabel}
+                          </Text>
+                        </View>
+                        <View style={pickerStyles.statCard}>
+                          <Text style={pickerStyles.statLabel}>Pista</Text>
+                          <Text style={pickerStyles.statValue}>
+                            {courtLabel}
+                          </Text>
+                        </View>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+
+                {/* Botón crear nuevo ejercicio cuando ya hay lista */}
+                <Pressable
+                  style={[baseStyles.darkButton, { marginTop: 4 }]}
+                  onPress={() => setCreatingExercise(true)}
+                >
+                  <Text style={baseStyles.darkText}>
+                    + Crear nuevo ejercicio
+                  </Text>
+                </Pressable>
+              </>
+            )}
+
+            {/* Botón volver / añadir sin seleccionar más */}
+            <View
+              style={{
+                marginTop: 16,
+                flexDirection: "row",
+                gap: 10,
+              }}
+            >
+              <Pressable
+                style={[baseStyles.lightButton, { flex: 1 }]}
+                onPress={closeExercisePicker}
+              >
+                <Text style={baseStyles.lightText}>Volver</Text>
               </Pressable>
-            );
-          })
+
+              <Pressable
+                style={[baseStyles.darkButton, { flex: 1 }]}
+                onPress={closeExercisePicker}
+              >
+                <Text style={baseStyles.darkText}>Añadir ejercicios</Text>
+              </Pressable>
+            </View>
+          </>
         )}
-
-        {/* Botón volver / añadir sin seleccionar más */}
-        <View
-          style={{
-            marginTop: 16,
-            flexDirection: "row",
-            gap: 10,
-          }}
-        >
-          <Pressable
-            style={[baseStyles.lightButton, { flex: 1 }]}
-            onPress={closeExercisePicker}
-          >
-            <Text style={baseStyles.lightText}>Volver</Text>
-          </Pressable>
-
-          <Pressable
-            style={[baseStyles.darkButton, { flex: 1 }]}
-            onPress={closeExercisePicker}
-          >
-            <Text style={baseStyles.darkText}>Añadir ejercicios</Text>
-          </Pressable>
-        </View>
       </ScrollView>
     );
   }

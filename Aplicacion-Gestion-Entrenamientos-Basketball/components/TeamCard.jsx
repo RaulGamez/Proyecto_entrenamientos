@@ -1,6 +1,6 @@
 // components/TeamCard.jsx
 // Tarjeta que muestra la info básica en la pag de equipos
-import { View, Text, TouchableOpacity, ImageBackground} from "react-native";
+import { Pressable, View, Text, TouchableOpacity, ImageBackground} from "react-native";
 import { teamStyles as styles } from "./stylesTeams";
 
 function Metric({ icon, label, value }) {
@@ -42,7 +42,7 @@ export function TeamCard({team, onPress}) {
     
     return (
     <TouchableOpacity activeOpacity={0.8} onPress={onPress}>
-      <View style={styles.teamCard}>
+      <Pressable style={styles.teamCard} onPress={onPress}>
         <ImageBackground
           source={coverSource}
           style={styles.teamCover}
@@ -62,7 +62,7 @@ export function TeamCard({team, onPress}) {
           <Metric icon="🧑‍🤝‍🧑" label="Jugadores" value={players} />
           <Metric icon="📈" label="% Victoria" value={winRate} />
         </View>
-      </View>
+      </Pressable>
     </TouchableOpacity>
   );
 }
