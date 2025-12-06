@@ -148,7 +148,23 @@ export function TrainingCreator({ onClose, onCreated, onGoToExercisesTab }) {
     ...teams.map((t) => ({ value: t.id, label: t.name })),
   ];
 
-   // ----- MODO PICKER DE EJERCICIOS -----
+  // --- Cálculo de tiempos (entrenamiento vs ejercicios) ---
+  const plannedDuration = Number(duration) || 0; // duración total del entreno
+  const totalExercisesMinutes = selectedExercises.reduce(
+    (sum, ex) => sum + (Number(ex.duration) || 0),
+    0
+  );
+
+  const remainingMinutes = plannedDuration - totalExercisesMinutes;
+  const showProgress = plannedDuration > 0 && selectedExercises.length > 0;
+  const isOver = remainingMinutes < 0;
+  const isUnderWarning = remainingMinutes > 5; // aviso solo si faltan más de 5'
+  const progressPercent =
+    plannedDuration > 0
+      ? Math.min((totalExercisesMinutes / plannedDuration) * 100, 100)
+      : 0;
+
+  // ----- MODO PICKER DE EJERCICIOS -----
   if (exercisePickerOpen) {
     return (
       <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
@@ -343,9 +359,62 @@ export function TrainingCreator({ onClose, onCreated, onGoToExercisesTab }) {
       />
 
       {/* ---------- EJERCICIOS SELECCIONADOS ---------- */}
-      <View style={exerciseBoxStyles.container}>
+       <View style={exerciseBoxStyles.container}>
         <Text style={exerciseBoxStyles.title}>Ejercicios seleccionados</Text>
 
+        {/* ----- Progreso de tiempo ----- */}
+        {showProgress ? (
+          <View style={exerciseBoxStyles.timeContainer}>
+            <View style={exerciseBoxStyles.timeHeaderRow}>
+              <Text style={exerciseBoxStyles.timeText}>
+                Tiempo ejercicios: {totalExercisesMinutes} min de {plannedDuration} min
+              </Text>
+
+              {/* Diferencia numérica (positivo: faltan; negativo: se pasa) */}
+              {remainingMinutes !== 0 && (
+                <Text
+                  style={
+                    isOver
+                      ? exerciseBoxStyles.timeOver
+                      : exerciseBoxStyles.timeDiff
+                  }
+                >
+                  {isOver
+                    ? `+${Math.abs(remainingMinutes)} min`
+                    : `-${remainingMinutes} min`}
+                </Text>
+              )}
+            </View>
+
+            <View style={exerciseBoxStyles.timeBarBg}>
+              <View
+                style={[
+                  exerciseBoxStyles.timeBarFill,
+                  isOver && exerciseBoxStyles.timeBarFillOver,
+                  { width: `${progressPercent}%` },
+                ]}
+              />
+            </View>
+
+            {/* Avisos suaves */}
+            {isOver && (
+              <Text style={exerciseBoxStyles.timeWarning}>
+                Te pasas del tiempo planificado por {Math.abs(remainingMinutes)} min.
+              </Text>
+            )}
+            {!isOver && isUnderWarning && (
+              <Text style={exerciseBoxStyles.timeWarning}>
+                Aún te quedan {remainingMinutes} min libres en la sesión.
+              </Text>
+            )}
+          </View>
+        ) : plannedDuration > 0 ? (
+          <Text style={exerciseBoxStyles.timeHint}>
+            Añade ejercicios con duración para ver cómo se reparte el tiempo.
+          </Text>
+        ) : null}
+
+        {/* ----- Lista / botón seleccionar ejercicios ----- */}
         {selectedExerciseIds.length === 0 ? (
           <>
             <Text style={exerciseBoxStyles.subtitle}>
@@ -369,7 +438,9 @@ export function TrainingCreator({ onClose, onCreated, onGoToExercisesTab }) {
             {selectedExercises.map((ex) => {
               const durationLabel = ex.duration ? `${ex.duration} min` : "-";
               const playersLabel =
-                ex.players != null && ex.players !== "" ? String(ex.players) : "-";
+                ex.players != null && ex.players !== ""
+                  ? String(ex.players)
+                  : "-";
 
               return (
                 <Pressable
@@ -641,5 +712,53 @@ const exerciseBoxStyles = StyleSheet.create({
     fontSize: 12,
     color: "#6b7280",
     fontWeight: "600",
+  },
+   // ----- Tiempo / barra -----
+  timeContainer: {
+    marginBottom: 8,
+  },
+  timeHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  timeText: {
+    fontSize: 12,
+    color: "#4b5563",
+  },
+  timeDiff: {
+    fontSize: 12,
+    color: "#6b7280",
+    fontWeight: "600",
+  },
+  timeOver: {
+    fontSize: 12,
+    color: "#ef4444", // rojo suave
+    fontWeight: "700",
+  },
+  timeBarBg: {
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: "#e5e7eb",
+    overflow: "hidden",
+  },
+  timeBarFill: {
+    height: "100%",
+    borderRadius: 999,
+    backgroundColor: "#22c55e", // verde
+  },
+  timeBarFillOver: {
+    backgroundColor: "#f97316", // naranja cuando se pasa
+  },
+  timeWarning: {
+    marginTop: 4,
+    fontSize: 11,
+    color: "#ea580c",
+  },
+  timeHint: {
+    fontSize: 11,
+    color: "#9ca3af",
+    marginBottom: 4,
   },
 });
