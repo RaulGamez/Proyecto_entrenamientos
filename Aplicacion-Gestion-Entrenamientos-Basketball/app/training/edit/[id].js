@@ -1,6 +1,6 @@
 // app/training/edit/[id].js
 import { useEffect, useState } from "react";
-import {View,Text,TextInput,ScrollView,Pressable,ActivityIndicator,Alert,Platform,StyleSheet} from "react-native";
+import { View,Text,TextInput,ScrollView,Pressable,ActivityIndicator,Alert,Platform,StyleSheet} from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { supabase } from "../../../lib/supabase";
 import { teamStyles as styles } from "../../../components/stylesTeams";
@@ -484,33 +484,40 @@ export default function EditTraining() {
         Actualiza la información del entrenamiento
       </Text>
 
+      {/* ---- Fecha ---- */}
+      <Text style={styles.label2}>Fecha del entrenamiento</Text>
       <TextInput
-        style={styles.input}
-        placeholder="Fecha (dd/mm/aaaa --:--:--)"
+        style={styles.input2}
+        placeholder="dd/mm/aaaa --:--:--"
         placeholderTextColor="#9ca3af"
         value={date}
         onChangeText={setDate}
         keyboardType="numbers-and-punctuation"
       />
 
+      {/* ---- Duración ---- */}
+      <Text style={styles.label2}>Duración (minutos)</Text>
       <TextInput
-        style={styles.input}
-        placeholder="Duración (minutos)"
+        style={styles.input2}
+        placeholder="Ej: 90"
         placeholderTextColor="#9ca3af"
         keyboardType="number-pad"
         value={duration}
         onChangeText={setDuration}
       />
 
+      {/* ---- Jugadores ---- */}
+      <Text style={styles.label2}>Número de jugadores</Text>
       <TextInput
-        style={styles.input}
-        placeholder="Número de jugadores"
+        style={styles.input2}
+        placeholder="Ej: 10"
         placeholderTextColor="#9ca3af"
         keyboardType="number-pad"
         value={players}
         onChangeText={setPlayers}
       />
 
+      {/* ---- Pista ---- */}
       <Dropdown
         label="Pista disponible"
         placeholder="Seleccionar disponibilidad"

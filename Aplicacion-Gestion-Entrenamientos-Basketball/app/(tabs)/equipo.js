@@ -6,6 +6,7 @@ import {
   Pressable,
   ActivityIndicator,
   StyleSheet,
+  TextInput,
 } from "react-native";
 import { useRouter, Stack, useFocusEffect } from "expo-router";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
@@ -33,6 +34,7 @@ export default function Teams() {
   const [teams, setTeams] = useState([]);
   const [players, setPlayers] = useState([]);
   const [cardsLoading, setCardsLoading] = useState(true);
+  const [playerSearch, setPlayerSearch] = useState("");
 
   // Carga
   const loadTeams = useCallback(async () => {
@@ -66,6 +68,34 @@ export default function Teams() {
     for (const t of teams) m[t.id] = t.name;
     return m;
   }, [teams]);
+
+  const filteredPlayers = useMemo(() => {
+    const term = playerSearch.trim().toLowerCase();
+    if (!term) return players;
+
+    return players.filter((p) => {
+      const name = p.name?.toLowerCase() ?? "";
+      const role = p.role?.toLowerCase() ?? "";
+      const status = p.status?.toLowerCase() ?? "";
+
+      const numberStr =
+        p.number != null && p.number !== "" ? String(p.number) : "";
+
+      // por si tu RPC mete info de equipo en alguna clave
+      const teamName =
+        p.team_name?.toLowerCase?.() ??
+        p.team?.toLowerCase?.() ??
+        "";
+
+      return (
+        name.includes(term) ||
+        role.includes(term) ||
+        status.includes(term) ||
+        numberStr.includes(term) ||
+        teamName.includes(term)
+      );
+    });
+  }, [players, playerSearch]);
 
   const openTeamsCreator = () => bsTeamsRef.current?.expand();
   const closeTeamsCreator = () => bsTeamsRef.current?.close();
@@ -207,17 +237,36 @@ export default function Teams() {
               {players.length === 0 ? (
                 renderEmptyPlayers()
               ) : (
-                <FlatList
-                  data={players}
-                  keyExtractor={(p) => String(p.id)}
-                  renderItem={({ item }) => (
-                    <PlayerCard
-                      player={item}
-                      onPress={() => router.push(`../team/players/${item.id}`)}
+                <>
+                  {/* 🔎 Buscador de jugadores */}
+                  <View style={styles.searchContainer}>
+                    <TextInput
+                      style={styles.searchInput}
+                      placeholder="Buscar por nombre, nº, posición, estado…"
+                      placeholderTextColor="#9ca3af"
+                      value={playerSearch}
+                      onChangeText={setPlayerSearch}
+                    />
+                  </View>
+
+                  {filteredPlayers.length === 0 ? (
+                    <Text style={{ color: "#6b7280", marginTop: 12 }}>
+                      No hay jugadores que coincidan con la búsqueda.
+                    </Text>
+                  ) : (
+                    <FlatList
+                      data={filteredPlayers}
+                      keyExtractor={(p) => String(p.id)}
+                      renderItem={({ item }) => (
+                        <PlayerCard
+                          player={item}
+                          onPress={() => router.push(`../team/players/${item.id}`)}
+                        />
+                      )}
+                      contentContainerStyle={{ paddingVertical: 12 }}
                     />
                   )}
-                  contentContainerStyle={{ paddingVertical: 12 }}
-                />
+                </>
               )}
             </View>
           )}
@@ -318,5 +367,19 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "600",
     fontSize: 13,
+  },
+  searchContainer: {
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: "#f9fafb",
+    fontSize: 14,
+    color: "#111827",
   },
 });

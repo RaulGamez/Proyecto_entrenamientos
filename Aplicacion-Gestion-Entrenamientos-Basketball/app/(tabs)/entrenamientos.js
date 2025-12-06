@@ -1,5 +1,5 @@
 // app/(tabs)/entrenamientos.js
-import { View, Text, FlatList, Pressable, ActivityIndicator, StyleSheet, ImageBackground} from "react-native";
+import { View, Text, FlatList, Pressable, ActivityIndicator, StyleSheet, ImageBackground, TextInput } from "react-native";
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { useRouter, Stack, useFocusEffect } from "expo-router";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
@@ -23,6 +23,7 @@ export default function Entrenamientos() {
   const [exercises, setExercises] = useState([]);          // TODO: cargar de Supabase
   const [loadingTrainings, setLoadingTrainings] = useState(false);
   const [loadingExercises, setLoadingExercises] = useState(false);
+  const [exerciseSearch, setExerciseSearch] = useState("");
 
   // mapa id -> ejercicio para mostrar rápido en las tarjetas
   const exercisesById = useMemo(() => {
@@ -32,6 +33,38 @@ export default function Entrenamientos() {
     });
     return map;
   }, [exercises]);
+
+  const filteredExercises = useMemo(() => {
+    const term = exerciseSearch.trim().toLowerCase();
+    if (!term) return exercises;
+
+    return exercises.filter((ex) => {
+      const name = ex.name?.toLowerCase() ?? "";
+      const type = ex.type?.toLowerCase() ?? "";
+
+      const playersStr =
+        ex.players != null && ex.players !== "" ? String(ex.players) : "";
+
+      const courtKey = ex.court || "";
+      const courtLabel =
+        courtKey
+          ? {
+              full: "Pista completa",
+              half: "Media pista",
+              quarter: "1/4 pista",
+              none: "Sin pista",
+            }[courtKey] || courtKey
+          : "";
+      const courtText = courtLabel.toLowerCase();
+
+      return (
+        name.includes(term) ||
+        type.includes(term) ||
+        playersStr.includes(term) ||
+        courtText.includes(term)
+      );
+    });
+  }, [exercises, exerciseSearch]);
 
   const openTrainingCreator = () => {
     setCreatorMode("training");
@@ -373,7 +406,7 @@ export default function Entrenamientos() {
               <Text style={styles.headerTitle}>
                 Mis ejercicios creados ({exercises.length})
               </Text>
-            <Pressable
+              <Pressable
                 style={styles.smallCreateButton}
                 onPress={openExerciseCreator}
               >
@@ -381,18 +414,36 @@ export default function Entrenamientos() {
               </Pressable>
             </View>
 
-
             {loadingExercises ? (
               <ActivityIndicator style={{ marginTop: 16 }} />
             ) : exercises.length === 0 ? (
               renderEmptyExercises()
             ) : (
-              <FlatList
-                data={exercises}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={{ paddingVertical: 12 }}
-                renderItem={renderExerciseCard}
-              />
+              <>
+                {/* 🔎 Buscador */}
+                <View style={styles.searchContainer}>
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Buscar por nombre, tipo, nº o pista…"
+                    placeholderTextColor="#9ca3af"
+                    value={exerciseSearch}
+                    onChangeText={setExerciseSearch}
+                  />
+                </View>
+
+                {filteredExercises.length === 0 ? (
+                  <Text style={{ color: "#6b7280", marginTop: 12 }}>
+                    No hay ejercicios que coincidan con la búsqueda.
+                  </Text>
+                ) : (
+                  <FlatList
+                    data={filteredExercises}
+                    keyExtractor={(item) => item.id}
+                    contentContainerStyle={{ paddingVertical: 12 }}
+                    renderItem={renderExerciseCard}
+                  />
+                )}
+              </>
             )}
           </View>
         )}
@@ -639,4 +690,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#4b5563",
   },
+
+  //buscador
+    searchContainer: {
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: "#f9fafb",
+    fontSize: 14,
+    color: "#111827",
+  },
+
 });
