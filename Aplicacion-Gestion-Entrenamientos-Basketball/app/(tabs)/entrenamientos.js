@@ -9,12 +9,13 @@ import { TrainingCreator } from "../../components/TrainingCreator";
 import { ExerciseCreator } from "../../components/ExerciseCreator";
 import { teamStyles as tstyles } from "../../components/stylesTeams";
 import { getUserExercises, getUserTrainings } from "../../lib/queries";
-
+import { useLocalSearchParams } from "expo-router";
 
 export default function Entrenamientos() {
   const router = useRouter();
   const snapPoints = useMemo(() => ["40%", "80%", "100%"], []);
   const bsRef = useRef(null);
+  const params = useLocalSearchParams();
 
   const [activeTab, setActiveTab] = useState("trainings"); // 'trainings' | 'exercises'
   const [creatorMode, setCreatorMode] = useState(null);
@@ -93,6 +94,19 @@ export default function Entrenamientos() {
       fetchExercises();
     }, [fetchTrainings, fetchExercises])
   );
+
+  useEffect(() => {
+    if (params.createExercise === "1") {
+      // abrir el bottom sheet directamente en modo crear ejercicio
+      setCreatorMode("exercise");
+      setActiveTab("exercises");
+
+      // esperar un tick para que el tab cargue
+      setTimeout(() => {
+        bsRef.current?.expand();
+      }, 150);
+    }
+  }, [params]);
 
   const goToExercisesTab = () => {
     setActiveTab("exercises");

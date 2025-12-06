@@ -5,6 +5,7 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { supabase } from "../../../lib/supabase";
 import { teamStyles as styles } from "../../../components/stylesTeams";
 import { updateTraining, getUserExercises } from "../../../lib/queries";
+import { ExerciseCreator } from "../../../components/ExerciseCreator";
 
 const COURT_OPTIONS = [
   { value: "full", label: "Pista completa" },
@@ -33,6 +34,7 @@ export default function EditTraining() {
   const [loadingExercises, setLoadingExercises] = useState(false);
   const [selectedExerciseIds, setSelectedExerciseIds] = useState([]);
   const [selectedExercises, setSelectedExercises] = useState([]);
+  const [creatingExerciseInline, setCreatingExerciseInline] = useState(false);
 
    // 1) Cargar entrenamiento + relaciones con ejercicios
   useEffect(() => {
@@ -128,6 +130,7 @@ export default function EditTraining() {
     if (allExercises.length === 0) {
       await loadExercises();
     }
+    setCreatingExerciseInline(false);
     setExercisePickerOpen(true);
   };
 
@@ -259,8 +262,50 @@ export default function EditTraining() {
   const trainingCourtLabel =
     COURT_LABELS[courtValue] || COURT_LABELS.none;
 
+  const loadExercises = async () => {
+    setLoadingExercises(true);
+    const { data, error } = await getUserExercises();
+
+    setLoadingExercises(false);
+
+    if (error) {
+      console.error("Error cargando ejercicios", error);
+      return [];
+    }
+
+    setAllExercises(data);
+    return data; // devolvemos la lista
+  };
+
   // ----- MODO PICKER EJERCICIOS -----
   if (exercisePickerOpen) {
+    // MODO CREAR EJERCICIO DIRECTAMENTE
+    if (creatingExerciseInline) {
+      return (
+        <ExerciseCreator
+          onClose={() => setCreatingExerciseInline(false)}
+          onCreated={async () => {
+            const data = await loadExercises();
+
+            // marcamos automáticamente el ejercicio más reciente en este entrenamiento
+            if (data && data.length > 0) {
+              const newestId = data[0].id;
+              setSelectedExerciseIds((prev) =>
+                prev.includes(newestId) ? prev : [...prev, newestId]
+              );
+            }
+
+            setCreatingExerciseInline(false);
+          }}
+          onGoToBoard={() => {
+            setCreatingExerciseInline(false);
+            router.push("/pizarra");
+          }}
+        />
+      );
+    }
+
+    // MODO LISTA / PICKER
     return (
       <ScrollView
         contentContainerStyle={{
@@ -287,86 +332,107 @@ export default function EditTraining() {
         {loadingExercises ? (
           <ActivityIndicator style={{ marginTop: 16 }} />
         ) : allExercises.length === 0 ? (
-          <Text style={{ color: "#4b5563", marginTop: 12 }}>
-            Aún no has creado ejercicios.
-          </Text>
+          <View style={{ marginTop: 12 }}>
+            <Text style={{ color: "#4b5563", marginTop: 12 }}>
+              Aún no has creado ejercicios.
+            </Text>
+
+            {/* BOTÓN: CREAR NUEVO EJERCICIO */}
+            <Pressable
+              style={[styles.darkButton, { marginTop: 10 }]}
+              onPress={() => setCreatingExerciseInline(true)}
+            >
+              <Text style={styles.darkText}>+ Crear nuevo ejercicio</Text>
+            </Pressable>
+          </View>
         ) : (
-          allExercises.map((item) => {
-            const selected = selectedExerciseIds.includes(item.id);
-            const durationLabel = item.duration
-              ? `${item.duration} min`
-              : "-";
-            const playersLabel =
-              item.players != null && item.players !== ""
-                ? String(item.players)
+          <>
+            {allExercises.map((item) => {
+              const selected = selectedExerciseIds.includes(item.id);
+              const durationLabel = item.duration
+                ? `${item.duration} min`
                 : "-";
-            const courtLabel = item.court
-              ? {
-                  full: "Pista completa",
-                  half: "Media pista",
-                  none: "Sin pista",
-                }[item.court] || item.court
-              : "Sin pista";
-            const typeLabel = item.type || "Ejercicio";
+              const playersLabel =
+                item.players != null && item.players !== ""
+                  ? String(item.players)
+                  : "-";
+              const courtLabel = item.court
+                ? {
+                    full: "Pista completa",
+                    half: "Media pista",
+                    quarter: "1/4 pista",
+                    none: "Sin pista",
+                  }[item.court] || item.court
+                : "Sin pista";
+              const typeLabel = item.type || "Ejercicio";
 
-            return (
-              <Pressable
-                key={item.id}
-                onPress={() => toggleExercise(item.id)}
-                style={[
-                  pickerStyles.card,
-                  selected && pickerStyles.cardSelected,
-                ]}
-              >
-                <View
-                  style={{
-                    paddingHorizontal: 12,
-                    paddingTop: 10,
-                    paddingBottom: 6,
-                  }}
+              return (
+                <Pressable
+                  key={item.id}
+                  onPress={() => toggleExercise(item.id)}
+                  style={[
+                    pickerStyles.card,
+                    selected && pickerStyles.cardSelected,
+                  ]}
                 >
-                  <Text
+                  <View
                     style={{
-                      fontSize: 15,
-                      fontWeight: "700",
-                      color: "#111827",
+                      paddingHorizontal: 12,
+                      paddingTop: 10,
+                      paddingBottom: 6,
                     }}
                   >
-                    {item.name}
-                  </Text>
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      color: "#6b7280",
-                    }}
-                  >
-                    {typeLabel}
-                  </Text>
-                </View>
+                    <Text
+                      style={{
+                        fontSize: 15,
+                        fontWeight: "700",
+                        color: "#111827",
+                      }}
+                    >
+                      {item.name}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        color: "#6b7280",
+                      }}
+                    >
+                      {typeLabel}
+                    </Text>
+                  </View>
 
-                <View style={pickerStyles.statsRow}>
-                  <View style={pickerStyles.statCard}>
-                    <Text style={pickerStyles.statLabel}>Duración</Text>
-                    <Text style={pickerStyles.statValue}>
-                      {durationLabel}
-                    </Text>
+                  <View style={pickerStyles.statsRow}>
+                    <View style={pickerStyles.statCard}>
+                      <Text style={pickerStyles.statLabel}>Duración</Text>
+                      <Text style={pickerStyles.statValue}>
+                        {durationLabel}
+                      </Text>
+                    </View>
+                    <View style={pickerStyles.statCard}>
+                      <Text style={pickerStyles.statLabel}>Jugadores</Text>
+                      <Text style={pickerStyles.statValue}>
+                        {playersLabel}
+                      </Text>
+                    </View>
+                    <View style={pickerStyles.statCard}>
+                      <Text style={pickerStyles.statLabel}>Pista</Text>
+                      <Text style={pickerStyles.statValue}>
+                        {courtLabel}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={pickerStyles.statCard}>
-                    <Text style={pickerStyles.statLabel}>Jugadores</Text>
-                    <Text style={pickerStyles.statValue}>
-                      {playersLabel}
-                    </Text>
-                  </View>
-                  <View style={pickerStyles.statCard}>
-                    <Text style={pickerStyles.statLabel}>Pista</Text>
-                    <Text style={pickerStyles.statValue}>
-                      {courtLabel}
-                    </Text>
-                  </View>
-                </View>
-              </Pressable>
-            );
-          })
+                </Pressable>
+              );
+            })}
+
+            {/* BOTÓN: CREAR NUEVO EJERCICIO (cuando sí hay lista) */}
+            <Pressable
+              style={[styles.darkButton, { marginTop: 8 }]}
+              onPress={() => setCreatingExerciseInline(true)}
+            >
+              <Text style={styles.darkText}>+ Crear nuevo ejercicio</Text>
+            </Pressable>
+          </>
         )}
 
         <View
@@ -393,6 +459,9 @@ export default function EditTraining() {
       </ScrollView>
     );
   }
+
+
+
 
   // ----- MODO FORMULARIO NORMAL -----
   return (
