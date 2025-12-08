@@ -1,5 +1,5 @@
 // app/(tabs)/entrenamientos.js
-import { View, Text, FlatList, Pressable, ActivityIndicator, StyleSheet, ImageBackground, TextInput } from "react-native";
+import { View, Text, FlatList, Pressable, ActivityIndicator, StyleSheet, ImageBackground, TextInput, SectionList} from "react-native";
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { useRouter, Stack, useFocusEffect } from "expo-router";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
@@ -51,7 +51,6 @@ export default function Entrenamientos() {
           ? {
               full: "Pista completa",
               half: "Media pista",
-              quarter: "1/4 pista",
               none: "Sin pista",
             }[courtKey] || courtKey
           : "";
@@ -65,6 +64,33 @@ export default function Entrenamientos() {
       );
     });
   }, [exercises, exerciseSearch]);
+
+
+  const exerciseSections = useMemo(() => {
+    if (!filteredExercises || filteredExercises.length === 0) return [];
+
+    const groups = {};
+
+    filteredExercises.forEach((ex) => {
+      const rawType = ex.type || "Otros";
+      const key = rawType.toLowerCase();
+
+      if (!groups[key]) {
+        groups[key] = {
+          title:
+            rawType.charAt(0).toUpperCase() + rawType.slice(1), // capitalizar
+          data: [],
+        };
+      }
+      groups[key].data.push(ex);
+    });
+
+    // devolver array ordenado por título
+    return Object.values(groups).sort((a, b) =>
+      a.title.localeCompare(b.title, "es")
+    );
+  }, [filteredExercises]);
+
 
   const openTrainingCreator = () => {
     setCreatorMode("training");
@@ -259,7 +285,6 @@ export default function Entrenamientos() {
         ? {
             full: "Pista completa",
             half: "Media pista",
-            quarter: "1/4 pista",
             none: "Sin pista",
         }[item.court] || item.court
         : "Sin pista";
@@ -436,11 +461,17 @@ export default function Entrenamientos() {
                     No hay ejercicios que coincidan con la búsqueda.
                   </Text>
                 ) : (
-                  <FlatList
-                    data={filteredExercises}
+                  <SectionList
+                    sections={exerciseSections}
                     keyExtractor={(item) => item.id}
                     contentContainerStyle={{ paddingVertical: 12 }}
-                    renderItem={renderExerciseCard}
+                    renderItem={({ item }) => renderExerciseCard({ item })}
+                    renderSectionHeader={({ section }) => (
+                      <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionHeaderText}>{section.title}</Text>
+                      </View>
+                    )}
+                    stickySectionHeadersEnabled={false}
                   />
                 )}
               </>
@@ -707,4 +738,29 @@ const styles = StyleSheet.create({
     color: "#111827",
   },
 
+    searchContainer: {
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: "#f9fafb",
+    fontSize: 14,
+    color: "#111827",
+  },
+
+  sectionHeader: {
+    marginTop: 12,
+    marginBottom: 4,
+    paddingHorizontal: 4,
+  },
+  sectionHeaderText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#4b5563",
+  },
 });
