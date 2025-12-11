@@ -4,6 +4,9 @@ import { View, Text, TextInput, Pressable, Alert, Platform, ScrollView } from "r
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { supabase } from "../../../lib/supabase";
 import { teamStyles as styles } from "../../../components/stylesTeams";
+import { EventEmitter } from "expo-modules-core";
+
+export const events = new EventEmitter();
 
 export default function EditMatch() {
   const { id } = useLocalSearchParams(); // matchId
@@ -50,6 +53,7 @@ export default function EditMatch() {
 
       if (error) throw error;
       router.back();
+
     } catch (e) {
       Alert.alert("Error", e.message || String(e));
     }

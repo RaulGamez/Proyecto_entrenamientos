@@ -137,22 +137,6 @@ export async function createPlayer({player, teams}) {
   return {data: playerId, error: null};
 }
 
-export async function getUserPlayersOld() {
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) throw userError || new Error("Usuario no autenticado");
-
-  const { data, error } = await supabase
-    .rpc("get_user_players", { user_uuid: user.id });
-
-  if (error) {
-    console.error("Error RPC get_user_players:", error.message);
-    return [];
-  }
-
-  // data ya es un array JSONB listo para usar
-  return data;
-}
-
 export async function getUserPlayers() {
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) throw userError || new Error("Usuario no autenticado");
@@ -188,8 +172,7 @@ export async function getUserPlayers() {
   const players = (data || []).map((row) => {
     const player = row.players;
 
-    const teams =
-      player.teams_players?.map((tp) => tp.teams) || [];
+    const teams = player.teams_players?.map((tp) => tp.teams) || [];
 
     return {
       ...player,
@@ -202,29 +185,15 @@ export async function getUserPlayers() {
   return {data: players, error: null};
 }
 
-export async function getTeamPlayers() {
+export async function getTeamPlayers(teamId) {
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) throw userError || new Error("Usuario no autenticado");
 
   const { data, error } = await supabase
-    .from('teams')
+    .from('teams_players')
     .select(`
-      id,
-      name,
-      category,
-      players_target,
-      goals,
-      training_days,
-      cover_url,
-      matches:matches!matches_team_id_fkey (
-        id,
-        opponent,
-        date,
-        our_pts,
-        opp_pts,
-        result
-      ),
-      players:players!players_team_id_fkey (
+      player_id,
+      players (
         id,
         name,
         number,
@@ -232,15 +201,33 @@ export async function getTeamPlayers() {
         age,
         height,
         status,
-        team_id
+        created_at,
+        created_by,
+        creator:created_by ( username ),
+        teams_players (
+          teams (*)
+        )
       )
     `)
-    .eq('id', id)
-    .order('date', { referencedTable: 'matches', ascending: false })
-    .limit(5, { referencedTable: 'matches' })
-    .order('name', { referencedTable: 'players', ascending: true })
-    .limit(6, { referencedTable: 'players' })
-    .single();
+    .eq('team_id', teamId)
+    .order('name', { foreignTable: 'players', ascending: true });
+
+  if (error) return {data: null, error: error};
+
+  const players = (data || []).map((row) => {
+    const player = row.players;
+
+    const teams = player.teams_players?.map((tp) => tp.teams) || [];
+
+    return {
+      ...player,
+      teams,
+    };
+  });
+
+  delete players.teams_players;
+
+  return {data: players, error: null};
 }
 
 export async function getEvents() {
@@ -571,6 +558,25 @@ export async function updateTeamPlayers({teamId, currentPlayersIds, selectedPlay
     
     if (insertError) return {error: insertError};
   }
+
+  return {error: null};
+}
+
+export async function deletePlayers(playersIds) {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) throw userError || new Error("Usuario no autenticado");
+
+  if (playersIds.length === 0) return {error: null}
+
+  // Eliminamos la relacion del usuario con el jugador (como desubscribirse)
+  // Si no existen equipos ni usuarios con este jugador Supabase se encargara de eliminarlo automaticamente del resto de tablas
+  const { error: deletePlayersError } = await supabase
+    .from("users_players")
+    .delete()
+    .eq("user_id", user.id)
+    .in("player_id", playersIds);
+  
+  if (deletePlayersError) return {error: deletePlayersError};
 
   return {error: null};
 }

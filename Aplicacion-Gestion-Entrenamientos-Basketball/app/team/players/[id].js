@@ -4,6 +4,8 @@ import { View, Text, TextInput, Pressable, Alert, Platform, ScrollView } from "r
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { supabase } from "../../../lib/supabase";
 import { teamStyles as styles } from "../../../components/stylesTeams";
+import { validatePlayerInfo } from "../../../lib/validators";
+import { deletePlayers } from "../../../lib/queries";
 
 export default function EditPlayer() {
   const { id } = useLocalSearchParams(); // playerId
@@ -41,7 +43,7 @@ export default function EditPlayer() {
   }, [id]);
 
   const save = async () => {
-    setFormatErrors(validatePlayerinfo(player));
+    setFormatErrors(validatePlayerInfo(player));
     const hasErrors = Object.values(formatErrors).some(msg => msg !== "");
     if (hasErrors) return;
 
@@ -77,7 +79,7 @@ export default function EditPlayer() {
         text: "Borrar",
         style: "destructive",
         onPress: async () => {
-          const { error } = await supabase.from("players").delete().eq("id", id);
+          const { error } = await deletePlayers([id]);
           if (error) return Alert.alert("Error", error.message);
           router.back();
         },

@@ -1,19 +1,19 @@
 // app/team/[id].js
 // Pantalla de detalle del equipo
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { View, Text, ScrollView, ImageBackground, ActivityIndicator, Pressable, FlatList, Alert, Modal, TextInput, Platform, StyleSheet} from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { supabase } from "../../lib/supabase";
 import { teamStyles as styles } from "../../components/stylesTeams";
 import { ProgressBar } from "../../components/ProgressBar";
 import { EmptyPlayers } from "../../components/EmptyPlayers";
 import { CloseIcon } from "../../components/icons";
-import { getTeamById, getUserPlayers, createPlayer, updateTeamPlayers } from "../../lib/queries";
+import { getTeamById, getUserPlayers, getTeamPlayers, createPlayer, updateTeamPlayers } from "../../lib/queries";
 import { PlayerCard } from "../../components/PlayerCard";
 
 
 export default function TeamDetail() {
-  const { id } = useLocalSearchParams();
+  const {id} = useLocalSearchParams();
   const router = useRouter();
 
   const [team, setTeam] = useState(null);
@@ -84,9 +84,15 @@ export default function TeamDetail() {
     setLoadingExtra(false);
   };
 
-  useEffect(() => {
+  useEffect(() => { // cargar por primera vez
     fetchAll();
   }, [id]);
+
+  useFocusEffect( // al regresar a la pantalla
+    useCallback(() => {
+      fetchAll();
+    }, [id])
+  );
 
   const togglePlayer = (pId) => {
     setSelectedPlayersIds((prev) =>
@@ -126,10 +132,16 @@ export default function TeamDetail() {
   };
 
   const filteredPlayers = useMemo(() => {
-    const term = playerSearch.trim().toLowerCase();
-    if (!term) return allPlayers;
+    // Unificamos en una lsiat los jugadores que poseemo con los del equipo sin repeticiones
+    const joinedTeamAndUserPlayers = [
+      ...players,
+      ...allPlayers.filter(p => !players.some(tp => tp.id === p.id))
+    ];
 
-    return allPlayers.filter((p) => {
+    const term = playerSearch.trim().toLowerCase();
+    if (!term) return joinedTeamAndUserPlayers;
+
+    return joinedTeamAndUserPlayers.filter((p) => {
       const name = p.name?.toLowerCase() ?? "";
       const role = p.role?.toLowerCase() ?? "";
       const status = p.status?.toLowerCase() ?? "";
@@ -147,7 +159,7 @@ export default function TeamDetail() {
         //teamsNames.some(teamName => teamName.includes(term))
       );
     });
-  }, [allPlayers, playerSearch]);
+  }, [allPlayers, players, playerSearch]);
 
   // Cálculos de resumen partidos
   const { totalMatches, wins, losses } = useMemo(() => {
@@ -235,10 +247,14 @@ export default function TeamDetail() {
   const fetchAllPlayers = async () => {
     setLoadingPlayers(true);
 
-    const { data, error } = await getUserPlayers();
-    if (error) return;
+    const { data: userPlayers, error: userPlayersError } = await getUserPlayers();
+    if (userPlayersError) throw userPlayersError;
 
-    setAllPlayers(data || []);
+    const { data: teamPlayers, error: teamPlayersError } = await getTeamPlayers(id);
+    if (teamPlayersError) throw teamPlayersError;
+
+    setPlayers(teamPlayers || []);
+    setAllPlayers(userPlayers || []);
 
     setLoadingPlayers(false);
   };
@@ -250,7 +266,7 @@ export default function TeamDetail() {
         <PlayerPicker
           visible={true}
           loadingPlayers={loadingPlayers}
-          allPlayers={allPlayers}
+          teamPlayers={players}
           selectedPlayersIds={selectedPlayersIds}
           playerSearch={playerSearch}
           setPlayerSearch={setPlayerSearch}
@@ -374,7 +390,7 @@ export default function TeamDetail() {
                   <Pressable
                     key={m.id}
                     style={rowStyle}
-                    onPress={() => router.push(`../team/matches/${m.id}`)}
+                    onPress={() => router.push(`/team/matches/${m.id}`)}
                   >
                     <View>
                       <Text style={{ fontWeight: "600" }}>
@@ -429,7 +445,7 @@ export default function TeamDetail() {
                   <Pressable
                     key={p.id}
                     style={rowStyle}
-                    onPress={() => router.push(`../team/players/${p.id}`)}
+                    onPress={() => router.push(`/team/players/${p.id}`)}
                   >
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontWeight: "600" }}>
@@ -665,7 +681,7 @@ const rowStyle = {
 function PlayerPicker({
   visible,
   loadingPlayers,
-  allPlayers,
+  teamPlayers,
   selectedPlayersIds,
   playerSearch,
   setPlayerSearch,
@@ -676,10 +692,13 @@ function PlayerPicker({
   onClose,
 }) {
   if (!visible) return null;
+
+  const filteredTeamPlayers = filteredPlayers.filter((fp) => teamPlayers.some(tp => tp.id === fp.id)) || [];
+  const filteredUserPlayers = filteredPlayers.filter((fp) => !teamPlayers.some(tp => tp.id === fp.id)) || [];
   
   return (
     <View style={{padding: 16, gap: 10}}>
-      {allPlayers.length === 0 ? (
+      {filteredPlayers.length === 0 ? (
         <EmptyPlayers onPress={openPlayerCreator} />
       ) : (
         <>
@@ -710,9 +729,31 @@ function PlayerPicker({
             </Text>
           ) : (
             <>
-              {filteredPlayers.map((item) => {
+              <Text style={styles.modalSubtitle}>
+                Jugadores en el equipo.
+              </Text>
+              {filteredTeamPlayers.map((item) => {
                 const selected = selectedPlayersIds.includes(item.id);
-                
+
+                return (
+                  <PlayerCard player={item}
+                  style={[
+                    pickerStyles.card,
+                    selected && pickerStyles.cardSelected,
+                  ]}
+                  key={item.id}
+                  onPress={() => onSelectPlayer(item.id)}
+                  />
+                );
+              })}
+
+
+              <Text style={styles.modalSubtitle}>
+                Tus jugadores.
+              </Text>
+              {filteredUserPlayers.map((item) => {
+                const selected = selectedPlayersIds.includes(item.id);
+
                 return (
                   <PlayerCard player={item}
                   style={[
@@ -881,7 +922,7 @@ const pickerStyles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: "#e5e7eb",
-    marginBottom: 12,
+    marginBottom: 0,
     overflow: "hidden",
   },
   cardSelected: {
