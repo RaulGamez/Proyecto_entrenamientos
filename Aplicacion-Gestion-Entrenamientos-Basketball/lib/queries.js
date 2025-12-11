@@ -112,14 +112,14 @@ export async function createPlayer({player, teams}) {
     .insert([{ id: playerId, ...player}])
     .single();
 
-  if (playerError) return {error: playerError};
+  if (playerError) return {data: null, error: playerError};
 
   // Relacion en users_players
   const { error: linkError } = await supabase
     .from("users_players")
     .insert([{ user_id: user.id, player_id: playerId }]);
 
-  if (linkError) return {error: linkError};
+  if (linkError) return {data: null, error: linkError};
 
   if (teams.length > 0) {
     // insert in teams_players
@@ -131,13 +131,13 @@ export async function createPlayer({player, teams}) {
     .from("teams_players")
     .insert(rows);
 
-    if (tpRelationError) return {error: tpRelationError};
+    if (tpRelationError) return {data: null, error: tpRelationError};
   }
 
-  return {error: null};
+  return {data: playerId, error: null};
 }
 
-export async function getUserPlayers() {
+export async function getUserPlayersOld() {
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) throw userError || new Error("Usuario no autenticado");
 
@@ -151,6 +151,55 @@ export async function getUserPlayers() {
 
   // data ya es un array JSONB listo para usar
   return data;
+}
+
+export async function getUserPlayers() {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) throw userError || new Error("Usuario no autenticado");
+
+  const { data, error } = await supabase
+    .from("users_players")
+    .select(`
+      player_id,
+      players (
+        id,
+        name,
+        number,
+        role,
+        age,
+        height,
+        status,
+        created_at,
+        created_by,
+        creator:created_by ( username ),
+        teams_players (
+          teams (*)
+        )
+      )
+    `)
+    .eq("user_id", user.id)
+    .order("name", { foreignTable: "players", ascending: true });
+
+  if (error) {
+    console.error("Error al obtener los jugadores del usuario:", error.message);
+    return {data: null, error: error};
+  }
+
+  const players = (data || []).map((row) => {
+    const player = row.players;
+
+    const teams =
+      player.teams_players?.map((tp) => tp.teams) || [];
+
+    return {
+      ...player,
+      teams,
+    };
+  });
+
+  delete players.teams_players;
+
+  return {data: players, error: null};
 }
 
 export async function getTeamPlayers() {
@@ -365,21 +414,21 @@ export async function getUserTrainings() {
     return {data: null, error: error};
   }
 
-  return {
-    data: (data || []).map((row) => {
-      const training = row.trainings;
+  const trainings = (data || []).map((row) => {
+    const training = row.trainings;
 
-      const exercises =
-        training.trainings_exercises?.map((te) => te.exercises) || [];
+    const exercises =
+      training.trainings_exercises?.map((te) => te.exercises) || [];
 
-      return {
-        ...training,
-        exercises,  // aquí ya tienes un array plano solo con ejercicios
-      };
-    }),
-    error: null,
-  };
+    return {
+      ...training,
+      exercises,  // aquí ya tienes un array plano solo con ejercicios
+    };
+  });
 
+  delete trainings.trainings_exercises;
+
+  return {data: trainings, error: null};
 }
 
 export async function updateTraining({training, exercises}) {
@@ -429,7 +478,6 @@ export async function updateTraining({training, exercises}) {
   }
 
   if (insertIds.length > 0) {
-    // Eliminamos relaciones por ejercicios deseleccionados
     const insertRows = insertIds.map(insertId => ({
       training_id: training.id,
       exercise_id: insertId,
@@ -438,6 +486,89 @@ export async function updateTraining({training, exercises}) {
     .from("trainings_exercises")
     .insert(insertRows);
 
+    if (insertError) return {error: insertError};
+  }
+
+  return {error: null};
+}
+
+export async function getTeamById(teamId) {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) throw userError || new Error("Usuario no autenticado");
+
+  const { data, error } = await supabase
+    .from("teams")
+    .select(`
+      id,
+      name,
+      category,
+      players_target,
+      training_days,
+      cover_url,
+      goals,
+      created_at,
+      created_by,
+      creator:created_by ( username ),
+      matches (*),
+      teams_players (
+        players (*)
+      )
+    `)
+    .eq("id", teamId)
+    // Ordenar matches
+    .order("date", { foreignTable: "matches", ascending: false })
+    .limit(5, { foreignTable: "matches" })
+    // Ordenar players
+    .order("name", { foreignTable: "teams_players.players", ascending: true })
+    .limit(6, { foreignTable: "teams_players.players" })
+    .single();
+
+  if (error) {
+    console.error("Error al cargar equipo:", error.message);
+    throw error;
+    return {data: null, error: error};
+  }
+
+  const team = {
+    ...data,
+    players: data.teams_players?.map(tp => tp.players) || [],
+  };
+
+  delete team.teams_players; // borrar el campo teams_players del objeto team (lo sustituye players)
+
+  return {data: team, error: null};
+}
+
+export async function updateTeamPlayers({teamId, currentPlayersIds, selectedPlayersIds}) {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) throw userError || new Error("Usuario no autenticado");
+
+
+  const deletePlayersIds = currentPlayersIds.filter((id) => !selectedPlayersIds.includes(id));
+  const insertPlayersIds = selectedPlayersIds.filter((id) => !currentPlayersIds.includes(id));
+
+  // Eliminamos las relaciones de los jugadores deseleccionados
+  if (deletePlayersIds.length > 0) {
+    const { error: deleteError } = await supabase
+      .from("teams_players")
+      .delete()
+      .eq("team_id", teamId)
+      .in("player_id", deletePlayersIds);
+    
+    if (deleteError) return {error: deleteError};
+  }
+
+  // Insertamos nuevas relaciones de los jugadors seleccionados
+  if (insertPlayersIds.length > 0) {
+    const insertRows = insertPlayersIds.map(playerId => ({
+      team_id: teamId,
+      player_id: playerId,
+    }));
+
+    const { error: insertError } = await supabase
+      .from("teams_players")
+      .insert(insertRows);
+    
     if (insertError) return {error: insertError};
   }
 

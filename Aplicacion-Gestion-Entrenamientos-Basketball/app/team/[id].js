@@ -1,12 +1,16 @@
 // app/team/[id].js
 // Pantalla de detalle del equipo
 import { useEffect, useState, useMemo } from "react";
-import { View, Text, ScrollView, ImageBackground, Pressable, Alert, Modal, TextInput, Platform} from "react-native";
+import { View, Text, ScrollView, ImageBackground, ActivityIndicator, Pressable, FlatList, Alert, Modal, TextInput, Platform, StyleSheet} from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { supabase } from "../../lib/supabase";
 import { teamStyles as styles } from "../../components/stylesTeams";
 import { ProgressBar } from "../../components/ProgressBar";
+import { EmptyPlayers } from "../../components/EmptyPlayers";
 import { CloseIcon } from "../../components/icons";
+import { getTeamById, getUserPlayers, createPlayer, updateTeamPlayers } from "../../lib/queries";
+import { PlayerCard } from "../../components/PlayerCard";
+
 
 export default function TeamDetail() {
   const { id } = useLocalSearchParams();
@@ -23,6 +27,7 @@ export default function TeamDetail() {
   // modales
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [showPlayerModal, setShowPlayerModal] = useState(false);
+  const [showPlayerPicker, setShowPlayerPicker] = useState(false);
 
   // form partido
   const [opponent, setOpponent] = useState("");
@@ -30,6 +35,12 @@ export default function TeamDetail() {
   const [ourPts, setOurPts] = useState("");
   const [oppPts, setOppPts] = useState("");
   const [savingMatch, setSavingMatch] = useState(false);
+
+  // Player Picker
+  const [allPlayers, setAllPlayers] = useState([]);
+  const [playerSearch, setPlayerSearch] = useState("");
+  const [selectedPlayersIds, setSelectedPlayersIds] = useState([]);
+  const [loadingPlayers, setLoadingPlayers] = useState(false);
 
   // form jugador
   const [playerName, setPlayerName] = useState("");
@@ -45,38 +56,30 @@ export default function TeamDetail() {
   const [loadingMoreMatches, setLoadingMoreMatches] = useState(false);
   const [loadingMorePlayers, setLoadingMorePlayers] = useState(false);
 
-
   const fetchAll = async () => {
-    const { data, error } = await supabase
-      .from('teams')
-      .select(`
-        id, name, category, players_target, goals, training_days, cover_url,
-        matches:matches!matches_team_id_fkey (
-          id, opponent, date, our_pts, opp_pts, result
-        ),
-        players:players!players_team_id_fkey (
-          id, name, number, role, age, height, status, team_id
-        )
-      `)
-      .eq('id', id)
-      .order('date', { referencedTable: 'matches', ascending: false })
-      .limit(5, { referencedTable: 'matches' })
-      .order('name', { referencedTable: 'players', ascending: true })
-      .limit(6, { referencedTable: 'players' })
-      .single();
-    if (!error && data) {
-      setTeam({
-        id: data.id,
-        name: data.name,
-        category: data.category,
-        players_target: data.players_target,
-        goals: data.goals,
-        training_days: data.training_days,
-        cover_url: data.cover_url,
-      });
-      setMatches(data.matches ?? []);
-      setPlayers(data.players ?? []);
-    }
+    setLoading(true);
+
+    console.log("ID: "+id);
+
+    const { data, error } = await getTeamById(id);
+    if (error) return;
+
+    console.log(`getTeamById data:\n${data}`);
+
+    setTeam({
+      id: data.id,
+      name: data.name,
+      category: data.category,
+      players_target: data.players_target,
+      goals: data.goals,
+      training_days: data.training_days,
+      cover_url: data.cover_url,
+      created_at: data.created_at,
+      creator: data.creator,
+    });
+    setMatches(data.matches ?? []);
+    setPlayers(data.players ?? []);
+
     setLoading(false);
     setLoadingExtra(false);
   };
@@ -84,6 +87,29 @@ export default function TeamDetail() {
   useEffect(() => {
     fetchAll();
   }, [id]);
+
+  const togglePlayer = (pId) => {
+    setSelectedPlayersIds((prev) =>
+      prev.includes(pId) ? prev.filter((x) => x !== pId) : [...prev, pId]
+    );
+  };
+
+  const updateSelectedPlayers = () => {
+    const currentSelectedPlayersIds = players.map((item) => item.id) || [];
+    setSelectedPlayersIds(currentSelectedPlayersIds);
+  }
+
+  const handleSaveSelectedPlayers = async () => {
+    const currentPlayersIds = players.map((item) => item.id);
+
+    const {error} = await updateTeamPlayers({
+      teamId: id,
+      currentPlayersIds: currentPlayersIds,
+      selectedPlayersIds: selectedPlayersIds
+    });
+
+    if (error) throw error;
+  }
 
   const handleDelete = async () => {
     Alert.alert("Eliminar equipo", "¿Seguro que quieres borrar este equipo?", [
@@ -99,14 +125,37 @@ export default function TeamDetail() {
     ]);
   };
 
+  const filteredPlayers = useMemo(() => {
+    const term = playerSearch.trim().toLowerCase();
+    if (!term) return allPlayers;
+
+    return allPlayers.filter((p) => {
+      const name = p.name?.toLowerCase() ?? "";
+      const role = p.role?.toLowerCase() ?? "";
+      const status = p.status?.toLowerCase() ?? "";
+
+      const numberStr =
+        p.number != null && p.number !== "" ? String(p.number) : "";
+
+      //const teamsNames = p.teams?.map(team => (team?.name ?? "").toLowerCase()) ?? [];
+
+      return (
+        name.includes(term) ||
+        role.includes(term) ||
+        status.includes(term) ||
+        numberStr.includes(term)
+        //teamsNames.some(teamName => teamName.includes(term))
+      );
+    });
+  }, [allPlayers, playerSearch]);
+
   // Cálculos de resumen partidos
   const { totalMatches, wins, losses } = useMemo(() => {
-    let w = 0, l = 0;
-    for (const m of matches) {
-      if (m.result === "win") w += 1;
-      else if (m.result === "loss") l += 1;
-    }
-    return { totalMatches: matches.length, wins: w, losses: l };
+
+    const losses = matches.filter((m) => m.result === "loss");
+    const wins = matches.filter((m) => m.result === "win");
+
+    return { totalMatches: matches.length, wins: wins.length, losses: losses.length };
   }, [matches]);
 
   if (loading)
@@ -183,205 +232,246 @@ export default function TeamDetail() {
     }
   };
 
+  const fetchAllPlayers = async () => {
+    setLoadingPlayers(true);
+
+    const { data, error } = await getUserPlayers();
+    if (error) return;
+
+    setAllPlayers(data || []);
+
+    setLoadingPlayers(false);
+  };
 
   return (
     <ScrollView style={styles.screen}>
-      <View style={{ position: "relative" }}>
-        <ImageBackground
-          source={team.cover_url ? { uri: team.cover_url } : require("../../img/teams.jpg")}
-          style={{ height: 220, justifyContent: "flex-end" }}
-        >
-          <View style={styles.teamCoverOverlay} />
-          <View style={{ padding: 16 }}>
-            <Text style={[styles.teamTitle, { fontSize: 20 }]}>{team.name}</Text>
-            {team.category && <Text style={styles.teamSubtitle}>{team.category}</Text>}
-          </View>
-        </ImageBackground>
-
-        {/* Cerrar */}
-        <Pressable
-          onPress={() => router.back()}
-          style={{
-            position: "absolute",
-            top: 28,
-            right: 20,
-            backgroundColor: "rgba(0,0,0,0.5)",
-            borderRadius: 20,
-            width: 36,
-            height: 36,
-            justifyContent: "center",
-            alignItems: "center",
+      {/*Player Picker*/}
+      {showPlayerPicker &&
+        <PlayerPicker
+          visible={true}
+          loadingPlayers={loadingPlayers}
+          allPlayers={allPlayers}
+          selectedPlayersIds={selectedPlayersIds}
+          playerSearch={playerSearch}
+          setPlayerSearch={setPlayerSearch}
+          filteredPlayers={filteredPlayers}
+          onSelectPlayer={(id) => togglePlayer(id)}
+          openPlayerCreator={() => {
+            setPlayerName("");
+            setPlayerNumber("");
+            setPlayerAge("");
+            setPlayerRole("");
+            setPlayerHeight("");
+            setShowPlayerModal(true);
           }}
-        >
-          <CloseIcon color="#fff" size={20} />
-        </Pressable>
-      </View>
-
-      <View style={{ padding: 16 }}>
-        {/* INFO GENERAL */}
-        <Text style={[styles.sectionTitle, { marginTop: 0 }]}>Información general</Text>
-        <Text style={{ color: "#6b7280", marginTop: 4 }}>
-          Jugadores objetivo: {team.players_target || "-"}
-        </Text>
-        <Text style={{ color: "#6b7280" }}>
-          Entrenos: {resumen || "—"}
-        </Text>
-
-        {/* RESUMEN PARTIDOS */}
-        <View
-          style={{
-            marginTop: 16,
-            borderRadius: 12,
-            backgroundColor: "#fff",
-            borderWidth: 1,
-            borderColor: "#e5e7eb",
-            paddingVertical: 12,
-            paddingHorizontal: 14,
+          saveSelectedPlayers={async () => {
+            await handleSaveSelectedPlayers();
+            await fetchAll();
+            setShowPlayerPicker(false);
           }}
-        >
-          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            <SummaryItem label="Partidos" value={totalMatches} />
-            <Divider />
-            <SummaryItem label="Ganados" value={wins} color="#16a34a" />
-            <Divider />
-            <SummaryItem label="Perdidos" value={losses} color="#dc2626" />
-          </View>
+          onClose={async () => {
+            await fetchAll();
+            setShowPlayerPicker(false);
+          }}
+        />
+      }
+      
+      {/* Detail del equipo*/}
+      <View style={{display: showPlayerPicker ? 'none' : 'flex'}}>
+        <View style={{ position: "relative" }}>
+          <ImageBackground
+            source={team.cover_url ? { uri: team.cover_url } : require("../../img/teams.jpg")}
+            style={{ height: 220, justifyContent: "flex-end" }}
+          >
+            <View style={styles.teamCoverOverlay} />
+            <View style={{ padding: 16 }}>
+              <Text style={[styles.teamTitle, { fontSize: 20 }]}>{team.name}</Text>
+              {team.category && <Text style={styles.teamSubtitle}>{team.category}</Text>}
+            </View>
+          </ImageBackground>
+
+          {/* Cerrar */}
+          <Pressable
+            onPress={() => router.back()}
+            style={{
+              position: "absolute",
+              top: 28,
+              right: 20,
+              backgroundColor: "rgba(0,0,0,0.5)",
+              borderRadius: 20,
+              width: 36,
+              height: 36,
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <CloseIcon color="#fff" size={20} />
+          </Pressable>
         </View>
 
-        {/* OBJETIVOS */}
-        <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Objetivos de entrenamiento</Text>
-        <ProgressBar label="Bote" value={goals.bote || 0} />
-        <ProgressBar label="Tiro" value={goals.tiro || 0} />
-        <ProgressBar label="Pase" value={goals.pase || 0} />
-        <ProgressBar label="Defensa" value={goals.defensa || 0} />
-        <ProgressBar label="Competición" value={goals.competicion || 0} />
-        <ProgressBar label="Dinámico" value={goals.dinamico || 0} />
+        <View style={{ padding: 16 }}>
+          {/* INFO GENERAL */}
+          <Text style={[styles.sectionTitle, { marginTop: 0 }]}>Información general</Text>
+          <Text style={{ color: "#6b7280", marginTop: 4 }}>
+            Jugadores objetivo: {team.players_target || "-"}
+          </Text>
+          <Text style={{ color: "#6b7280" }}>
+            Entrenos: {resumen || "—"}
+          </Text>
 
-        {/* HISTORIAL PARTIDOS */}
-        <Card>
-          <SectionHeader
-            title={`Historial de Partidos (${matches.length})`}
-            actionLabel="Añadir Resultado"
-            onAction={() => {
-              // reset form
-              setOpponent("");
-              setMatchDate(formatDate(new Date()));
-              setOurPts("");
-              setOppPts("");
-              setShowMatchModal(true);
+          {/* RESUMEN PARTIDOS */}
+          <View
+            style={{
+              marginTop: 16,
+              borderRadius: 12,
+              backgroundColor: "#fff",
+              borderWidth: 1,
+              borderColor: "#e5e7eb",
+              paddingVertical: 12,
+              paddingHorizontal: 14,
             }}
-            dark
-          />
-          {loadingExtra ? (
-            <Muted>Cargando historial…</Muted>
-          ) : matches.length === 0 ? (
-            <Muted>No hay partidos registrados aún</Muted>
-          ) : (
-            <>
-              {matches.map((m) => (
-                <Pressable
-                  key={m.id}
-                  style={rowStyle}
-                  onPress={() => router.push(`../team/matches/${m.id}`)}
-                >
-                  <View>
-                    <Text style={{ fontWeight: "600" }}>
-                      {m.opponent || "Rival"} · {formatDate(m.date)}
-                    </Text>
-                    {"our_pts" in m && "opp_pts" in m && (
-                      <Text style={{ color: "#6b7280", marginTop: 2 }}>
-                        {m.our_pts} - {m.opp_pts}
+          >
+            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+              <SummaryItem label="Partidos" value={totalMatches} />
+              <Divider />
+              <SummaryItem label="Ganados" value={wins} color="#16a34a" />
+              <Divider />
+              <SummaryItem label="Perdidos" value={losses} color="#dc2626" />
+            </View>
+          </View>
+
+          {/* OBJETIVOS */}
+          <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Objetivos de entrenamiento</Text>
+          <ProgressBar label="Bote" value={goals.bote || 0} />
+          <ProgressBar label="Tiro" value={goals.tiro || 0} />
+          <ProgressBar label="Pase" value={goals.pase || 0} />
+          <ProgressBar label="Defensa" value={goals.defensa || 0} />
+          <ProgressBar label="Competición" value={goals.competicion || 0} />
+          <ProgressBar label="Dinámico" value={goals.dinamico || 0} />
+
+          {/* HISTORIAL PARTIDOS */}
+          <Card>
+            <SectionHeader
+              title={`Historial de Partidos (${matches.length})`}
+              actionLabel="Añadir Resultado"
+              onAction={() => {
+                // reset form
+                setOpponent("");
+                setMatchDate(formatDate(new Date()));
+                setOurPts("");
+                setOppPts("");
+                setShowMatchModal(true);
+              }}
+              dark
+            />
+            {loadingExtra ? (
+              <Muted>Cargando historial…</Muted>
+            ) : matches.length === 0 ? (
+              <Muted>No hay partidos registrados aún</Muted>
+            ) : (
+              <>
+                {matches.map((m) => (
+                  <Pressable
+                    key={m.id}
+                    style={rowStyle}
+                    onPress={() => router.push(`../team/matches/${m.id}`)}
+                  >
+                    <View>
+                      <Text style={{ fontWeight: "600" }}>
+                        {m.opponent || "Rival"} · {formatDate(m.date)}
                       </Text>
-                    )}
-                  </View>
-                  <Chip
-                    text={m.result === "win" ? "Ganado" : m.result === "loss" ? "Perdido" : "Empate"}
-                    tone={m.result === "win" ? "success" : m.result === "loss" ? "danger" : "neutral"}
-                  />
-                </Pressable>
-              ))}
-
-              {matches.length >= 5 && (
-                <Pressable
-                  onPress={loadMoreMatches}
-                  style={[styles.lightButton, { marginTop: 12, alignSelf: "center", paddingHorizontal: 16 }]}
-                  disabled={loadingMoreMatches}
-                >
-                  <Text style={styles.lightText}>
-                    {loadingMoreMatches ? "Cargando…" : "Ver más partidos"}
-                  </Text>
-                </Pressable>
-              )}
-            </>
-          )}
-        </Card>
-
-        {/* JUGADORES */}
-        <Card>
-          <SectionHeader
-            title={`Jugadores (${players.length})`}
-            actionLabel="Añadir jugador"
-            onAction={() => {
-              setPlayerName("");
-              setPlayerNumber("");
-              setPlayerAge("");
-              setPlayerRole("");
-              setPlayerHeight("");
-              setShowPlayerModal(true);
-            }}
-          />
-          {loadingExtra ? (
-            <Muted>Cargando jugadores…</Muted>
-          ) : players.length === 0 ? (
-            <Muted>No hay jugadores todavía</Muted>
-          ) : (
-            <>
-              {players.map((p) => (
-                <Pressable
-                  key={p.id}
-                  style={rowStyle}
-                  onPress={() => router.push(`../team/players/${p.id}`)}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontWeight: "600" }}>
-                      {p.number ? `#${p.number} ` : ""}{p.name}
-                    </Text>
-                    <Text style={{ color: "#6b7280", marginTop: 2 }}>
-                      {formatPlayerMetaInsideTeam(p)}
-                    </Text>
-                  </View>
-                  {p.status && (
+                      {"our_pts" in m && "opp_pts" in m && (
+                        <Text style={{ color: "#6b7280", marginTop: 2 }}>
+                          {m.our_pts} - {m.opp_pts}
+                        </Text>
+                      )}
+                    </View>
                     <Chip
-                      text={p.status === "active" ? "Activo" : p.status}
-                      tone={p.status === "active" ? "success" : "neutral"}
+                      text={m.result === "win" ? "Ganado" : m.result === "loss" ? "Perdido" : "Empate"}
+                      tone={m.result === "win" ? "success" : m.result === "loss" ? "danger" : "neutral"}
                     />
-                  )}
-                </Pressable>
-              ))}
+                  </Pressable>
+                ))}
 
-              {players.length >= 6 && (
-                <Pressable
-                  onPress={loadMorePlayers}
-                  style={[styles.lightButton, { marginTop: 12, alignSelf: "center", paddingHorizontal: 16 }]}
-                  disabled={loadingMorePlayers}
-                >
-                  <Text style={styles.lightText}>
-                    {loadingMorePlayers ? "Cargando…" : "Ver más jugadores"}
-                  </Text>
-                </Pressable>
-              )}
-            </>
-          )}
-        </Card>
+                {matches.length >= 5 && (
+                  <Pressable
+                    onPress={loadMoreMatches}
+                    style={[styles.lightButton, { marginTop: 12, alignSelf: "center", paddingHorizontal: 16 }]}
+                    disabled={loadingMoreMatches}
+                  >
+                    <Text style={styles.lightText}>
+                      {loadingMoreMatches ? "Cargando…" : "Ver más partidos"}
+                    </Text>
+                  </Pressable>
+                )}
+              </>
+            )}
+          </Card>
 
-        {/* ACCIONES */}
-        <View style={{ flexDirection: "row", gap: 10, marginTop: 30, marginBottom: 24 }}>
-          <Pressable style={[styles.lightButton, { flex: 1 }]} onPress={() => router.push(`/team/edit/${team.id}`)}>
-            <Text style={styles.lightText}>Editar equipo</Text>
-          </Pressable>
-          <Pressable style={[styles.darkButton, { flex: 1 }]} onPress={handleDelete}>
-            <Text style={styles.darkText}>Borrar equipo</Text>
-          </Pressable>
+          {/* JUGADORES */}
+          <Card>
+            <SectionHeader
+              title={`Jugadores (${players.length})`}
+              actionLabel="Añadir jugador"
+              onAction={() => {
+                updateSelectedPlayers();
+                fetchAllPlayers();
+                setShowPlayerPicker(true);
+              }}
+            />
+            {loadingExtra ? (
+              <Muted>Cargando jugadores…</Muted>
+            ) : players.length === 0 ? (
+              <Muted>No hay jugadores todavía</Muted>
+            ) : (
+              <>
+                {players.map((p) => (
+                  <Pressable
+                    key={p.id}
+                    style={rowStyle}
+                    onPress={() => router.push(`../team/players/${p.id}`)}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontWeight: "600" }}>
+                        {p.number ? `#${p.number} ` : ""}{p.name}
+                      </Text>
+                      <Text style={{ color: "#6b7280", marginTop: 2 }}>
+                        {formatPlayerMetaInsideTeam(p)}
+                      </Text>
+                    </View>
+                    {p.status && (
+                      <Chip
+                        text={p.status === "active" ? "Activo" : p.status}
+                        tone={p.status === "active" ? "success" : "neutral"}
+                      />
+                    )}
+                  </Pressable>
+                ))}
+
+                {players.length >= 6 && (
+                  <Pressable
+                    onPress={loadMorePlayers}
+                    style={[styles.lightButton, { marginTop: 12, alignSelf: "center", paddingHorizontal: 16 }]}
+                    disabled={loadingMorePlayers}
+                  >
+                    <Text style={styles.lightText}>
+                      {loadingMorePlayers ? "Cargando…" : "Ver más jugadores"}
+                    </Text>
+                  </Pressable>
+                )}
+              </>
+            )}
+          </Card>
+
+          {/* ACCIONES */}
+          <View style={{ flexDirection: "row", gap: 10, marginTop: 30, marginBottom: 24 }}>
+            <Pressable style={[styles.lightButton, { flex: 1 }]} onPress={() => router.push(`/team/edit/${team.id}`)}>
+              <Text style={styles.lightText}>Editar equipo</Text>
+            </Pressable>
+            <Pressable style={[styles.darkButton, { flex: 1 }]} onPress={handleDelete}>
+              <Text style={styles.darkText}>Borrar equipo</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
 
@@ -490,18 +580,21 @@ export default function TeamDetail() {
                 }
                 setSavingPlayer(true);
                 try {
-                  const { error } = await supabase.from("players").insert({
-                    team_id: id,
+                  const playerInfo = {
                     name: playerName,
                     number: playerNumber ? parseInt(playerNumber, 10) : null,
                     age: playerAge ? parseInt(playerAge, 10) : null,
                     role: playerRole || null,
                     height: playerHeight || null,
                     status: "active",
-                  });
+                  };
+
+                  const {data, error} = await createPlayer({player: playerInfo, teams: [id]})
+
                   if (error) throw error;
+                  await fetchAllPlayers();
+                  togglePlayer(data);
                   setShowPlayerModal(false);
-                  await fetchAll();
                 } catch (e) {
                   Alert.alert("Error guardando", e.message || String(e));
                 } finally {
@@ -569,6 +662,106 @@ const rowStyle = {
 };
 
 /* ---------- Helpers Modal & Inputs ---------- */
+function PlayerPicker({
+  visible,
+  loadingPlayers,
+  allPlayers,
+  selectedPlayersIds,
+  playerSearch,
+  setPlayerSearch,
+  filteredPlayers,
+  onSelectPlayer,
+  openPlayerCreator,
+  saveSelectedPlayers,
+  onClose,
+}) {
+  if (!visible) return null;
+  
+  return (
+    <View style={{padding: 16, gap: 10}}>
+      {allPlayers.length === 0 ? (
+        <EmptyPlayers onPress={openPlayerCreator} />
+      ) : (
+        <>
+          <Text style={styles.modalTitle}>Seleccionar jugadores</Text>
+          <Text style={styles.modalSubtitle}>
+            Toca las cartas para seleccionarlas o deseleccionarlas.
+          </Text>
+          <Text style={{ color: "#111827", fontSize: 13, marginBottom: 8 }}>
+            Seleccionados: {selectedPlayersIds.length}
+          </Text>
+
+          {/* 🔎 Buscador de jugadores */}
+          <View style={searchStyles.searchContainer}>
+            <TextInput
+            style={searchStyles.searchInput}
+            placeholder="Buscar por nombre, nº, posición, estado…"
+            placeholderTextColor="#9ca3af"
+            value={playerSearch}
+            onChangeText={setPlayerSearch}
+            />
+          </View>
+
+          {loadingPlayers ? (
+            <ActivityIndicator style={{ marginTop: 16 }} />
+          ) : filteredPlayers.length === 0 ? (
+            <Text style={{ color: "#6b7280", marginTop: 12 }}>
+              No hay jugadores que coincidan con la búsqueda.
+            </Text>
+          ) : (
+            <>
+              {filteredPlayers.map((item) => {
+                const selected = selectedPlayersIds.includes(item.id);
+                
+                return (
+                  <PlayerCard player={item}
+                  style={[
+                    pickerStyles.card,
+                    selected && pickerStyles.cardSelected,
+                  ]}
+                  key={item.id}
+                  onPress={() => onSelectPlayer(item.id)}
+                  />
+                );
+              })}
+            </>
+          )}
+
+          {/* BOTÓN: CREAR NUEVO JUGADOR (cuando sí hay lista) */}
+          <Pressable
+            style={[styles.darkButton, { marginTop: 8 }]}
+            onPress={openPlayerCreator}
+          >
+            <Text style={styles.darkText}>+ Crear nuevo jugador</Text>
+          </Pressable>
+
+          <View
+          style={{
+            marginTop: 16,
+            flexDirection: "row",
+            gap: 10,
+          }}
+          >
+            <Pressable
+              style={[styles.lightButton, { flex: 1 }]}
+              onPress={onClose}
+            >
+              <Text style={styles.lightText}>Volver</Text>
+            </Pressable>
+
+            <Pressable
+              style={[styles.darkButton, { flex: 1 }]}
+              onPress={saveSelectedPlayers}
+            >
+              <Text style={styles.darkText}>Añadir jugadores</Text>
+            </Pressable>
+          </View>
+        </>
+      )}
+    </View>
+  );
+}
+
 function Backdrop({ onPress }) {
   return (
     <Pressable onPress={onPress} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.4)" }} />
@@ -681,3 +874,35 @@ function formatPlayerMetaInsideTeam(p) {
   parts.push(p.team_id ? "" : "Sin Equipo");
   return parts.filter(Boolean).join(" • ") || "Sin posición";
 }
+
+const pickerStyles = StyleSheet.create({
+  card: {
+    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    marginBottom: 12,
+    overflow: "hidden",
+  },
+  cardSelected: {
+    borderColor: "#16a34a",
+    borderWidth: 2,
+  }
+});
+
+const searchStyles = StyleSheet.create({
+  searchContainer: {
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: "#f9fafb",
+    fontSize: 14,
+    color: "#111827",
+  }
+});

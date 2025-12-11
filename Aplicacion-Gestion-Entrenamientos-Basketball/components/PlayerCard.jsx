@@ -1,7 +1,7 @@
 import { View, Text, Pressable, TouchableOpacity, ImageBackground} from "react-native";
 import { teamStyles as tstyles } from "./stylesTeams";
 
-export function PlayerCard({player, onPress}) {
+export function PlayerCard({player, onPress, style}) {
     const roleLabel = (role) => {
         const map = { "1": "Base", "2": "Escolta", "3": "Alero", "4": "Ala-Pívot", "5": "Pívot" };
         if (role == null || role === "") return null;
@@ -30,7 +30,7 @@ export function PlayerCard({player, onPress}) {
     };
 
     return (
-        <Pressable onPress={onPress} style={tstyles.playerRow}>
+        <Pressable onPress={onPress} style={[tstyles.playerRow, style]}>
             <View style={{ flex: 1}}>
                 <Text style={{ fontWeight: "700", fontSize: 16 }}>
                     {player.number ? `#${player.number} ` : ""}{player.name}

@@ -18,6 +18,7 @@ import { TeamsCreator } from "../../components/TeamsCreator";
 import { getUserTeams, getUserPlayers } from "../../lib/queries";
 import { PlayerCreator } from "../../components/PlayerCreator";
 import { PlayerCard } from "../../components/PlayerCard";
+import { EmptyPlayers } from "../../components/EmptyPlayers";
 
 export default function Teams() {
   const router = useRouter();
@@ -43,7 +44,7 @@ export default function Teams() {
   }, []);
   
   const loadPlayers = useCallback(async () => {
-    const p = await getUserPlayers();
+    const {data: p, error} = await getUserPlayers();
     setPlayers(p);
   }, []);
 
@@ -82,17 +83,14 @@ export default function Teams() {
         p.number != null && p.number !== "" ? String(p.number) : "";
 
       // por si tu RPC mete info de equipo en alguna clave
-      const teamName =
-        p.team_name?.toLowerCase?.() ??
-        p.team?.toLowerCase?.() ??
-        "";
+      const teamsNames = p.teams?.map(team => team.name.toLowerCase?.()) ?? [];
 
       return (
         name.includes(term) ||
         role.includes(term) ||
         status.includes(term) ||
         numberStr.includes(term) ||
-        teamName.includes(term)
+        teamsNames.some(teamName => teamName.includes(term))
       );
     });
   }, [players, playerSearch]);
@@ -112,20 +110,6 @@ export default function Teams() {
       <Pressable style={tstyles.primaryButton} onPress={openTeamsCreator}>
         <Text style={tstyles.primaryButtonText}>
           + Crear tu primer equipo
-        </Text>
-      </Pressable>
-    </View>
-  );
-
-  const renderEmptyPlayers = () => (
-    <View style={tstyles.emptyCard}>
-      <View style={tstyles.emptyIconCircle}>
-        <Text style={{ fontSize: 26 }}>👤</Text>
-      </View>
-      <Text style={tstyles.emptyText}>Aún no has creado ningún jugador</Text>
-      <Pressable style={tstyles.primaryButton} onPress={openPlayerCreator}>
-        <Text style={tstyles.primaryButtonText}>
-          + Crear tu primer jugador
         </Text>
       </Pressable>
     </View>
@@ -210,7 +194,10 @@ export default function Teams() {
                   renderItem={({ item }) => (
                     <TeamCard
                     team={item}
-                    onPress={() => router.push(`../team/${item.id}`)}
+                    onPress={() => {
+                      console.log("Item ID: " + item.id);
+                      router.push(`../team/${item.id}`);
+                    }}
                   />
                   )}
                   contentContainerStyle={{ paddingVertical: 12 }}
@@ -235,7 +222,7 @@ export default function Teams() {
               </View>
 
               {players.length === 0 ? (
-                renderEmptyPlayers()
+                <EmptyPlayers onPress={openPlayerCreator}></EmptyPlayers>
               ) : (
                 <>
                   {/* 🔎 Buscador de jugadores */}

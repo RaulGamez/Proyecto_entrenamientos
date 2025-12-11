@@ -41,7 +41,7 @@ export function PlayerCreator({ teams = [], onCreated, onClose }) {
     setIsLoading(true);
     try {
       // insert in players table
-      const { error } = await createPlayer({player: playerInfo, teams: teamsId});
+      const { data, error } = await createPlayer({player: playerInfo, teams: teamsId});
       if (error) {
         throw error;
         return;
