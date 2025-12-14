@@ -134,17 +134,25 @@ export const styles = StyleSheet.create({
     },
 
     eventChip: {
-        backgroundColor: "#fff3e7",
+        backgroundColor: "#e8f0ff",
         borderRadius: 8,
         paddingVertical: 3,
         paddingHorizontal: 6,
-        borderWidth: 1, borderColor: "#ffd2a8",
+        borderWidth: 1, borderColor: "#93c5fd",
     },
     eventText: { fontSize: 10, color: "#111", fontWeight: "600" },
-    eventTime: { color: "#ff9531" },
+    eventTime: { color: "#2563eb" },
     calendarHeaderContainer: { backgroundColor: "#f6f6f6ff", borderBottomWidth: 0 },
     calendarHeaderContent: { color: "#000" },
-    
+
+    eventChipTraining: {
+        backgroundColor: "#fff3e7",
+        borderColor: "#ffd2a8",
+    },
+    eventTimeTraining: {
+        color: "#ff9531",
+    },
+
     // --- Agenda de hoy
     agendaItem: {
         flexDirection: "row",
@@ -319,6 +327,39 @@ export const styles = StyleSheet.create({
         shadowOpacity: 0.05,
         shadowRadius: 8,
         elevation: 1,
+    },
+
+    emptyStateCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    },
+
+    emptyStateIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: "#f9fafb",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    },
+
+    emptyStateTitle: {
+    fontWeight: "700",
+    color: "#111",
+    marginBottom: 2,
+    },
+
+    emptyStateText: {
+    color: "#6b7280",
+    fontSize: 12,
     },
 
 });

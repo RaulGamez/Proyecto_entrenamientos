@@ -1,6 +1,109 @@
 import { supabase } from "./supabase";
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
+import dayjs from "dayjs";
+
+
+// --------------------
+// Helpers calendario
+// --------------------
+const DOW = { mon: 1, tue: 2, wed: 3, thu: 4, fri: 5 }; // ISO weekday (L=1..D=7)
+
+function combineDayAndHHMM(dateDayjs, hhmm) {
+  const [h, m] = String(hhmm || "00:00").split(":").map(Number);
+  return dateDayjs.hour(h || 0).minute(m || 0).second(0).millisecond(0).toDate();
+}
+
+function getSeasonRange(now = dayjs()) {
+  const y = now.year();
+  const m = now.month(); // 0=ene..11=dic
+
+  // Sep(8)–Dic(11)
+  if (m >= 8 && m <= 11) {
+    return {
+      start: now.startOf("day"),
+      end: dayjs(new Date(y + 1, 5, 30)).endOf("day"), // 30 junio del año siguiente
+    };
+  }
+
+  // Ene(0)–Jun(5)
+  if (m >= 0 && m <= 5) {
+    return {
+      start: now.startOf("day"),
+      end: dayjs(new Date(y, 5, 30)).endOf("day"), // 30 junio de este año
+    };
+  }
+
+  // Jul(6)–Ago(7)
+  return {
+    start: dayjs(new Date(y, 8, 1)).startOf("day"), // 1 septiembre de este año
+    end: dayjs(new Date(y + 1, 5, 30)).endOf("day"), // 30 junio del siguiente año
+  };
+}
+
+function* iterateDays(startDayjs, endDayjs) {
+  let d = startDayjs.startOf("day");
+  const end = endDayjs.startOf("day");
+  while (d.isSame(end, "day") || d.isBefore(end, "day")) {
+    yield d;
+    d = d.add(1, "day");
+  }
+}
+
+function chunkArray(arr, size = 500) {
+  const out = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+async function createTrainingEventsForTeam({ userId, teamName, schedule, teamId}) {
+  if (!schedule) return { error: null };
+
+  // Días enabled del schedule
+  const enabledKeys = Object.keys(DOW).filter((k) => schedule?.[k]?.enabled);
+  if (enabledKeys.length === 0) return { error: null };
+
+  const { start, end } = getSeasonRange(dayjs());
+
+  const rows = [];
+
+  for (const day of iterateDays(start, end)) {
+    const isoWeekday = day.isoWeekday(); // 1..7
+    for (const k of enabledKeys) {
+      if (isoWeekday !== DOW[k]) continue;
+
+      const startHHMM = schedule[k].start;
+      const endHHMM = schedule[k].end;
+
+      const evStart = combineDayAndHHMM(day, startHHMM);
+      const evEnd = combineDayAndHHMM(day, endHHMM);
+
+      // Seguridad: evitar eventos con fin <= inicio
+      if (!dayjs(evEnd).isAfter(dayjs(evStart))) continue;
+
+      rows.push({
+        title: `Entrene ${teamName} (${startHHMM}-${endHHMM})`,
+        start: evStart.toISOString(),
+        end: evEnd.toISOString(),
+        team_id: teamId,
+        kind: "training",
+        created_by: userId,
+      });
+    }
+  }
+
+  if (rows.length === 0) return { error: null };
+
+  // Insert por chunks
+  const chunks = chunkArray(rows, 500);
+  for (const c of chunks) {
+    const { error } = await supabase.from("events").insert(c);
+    if (error) return { error };
+  }
+
+  return { error: null };
+}
+
 
 // Obtener equipos del usuario autenticado y participantes
 export async function getUserTeams() {
@@ -48,16 +151,26 @@ export async function createTeam(team) {
     .insert([{ id: teamId, ...team}])
     .single();
 
-  if (teamError) return {teamError};
+  if (teamError) return {teamId: null, error: teamError};
 
   // Relacion en users_teams
   const { error: linkError } = await supabase
     .from("users_teams")
     .insert([{ user_id: user.id, team_id: teamId }]);
 
-  if (linkError) return {linkError};
+  if (linkError) return {teamId, error: linkError};
 
-  return {error: null};
+  // Crear eventos del calendario según training_days
+  const { error: eventsError } = await createTrainingEventsForTeam({
+    userId: user.id,
+    teamId,
+    teamName: team.name || "Equipo",
+    schedule: team.training_days,
+  });
+
+  if (eventsError) return { teamId, error: eventsError };
+
+  return { teamId, error: null };
 }
 
 // Eliminar un equipo (si el usuario es unico miembro)
@@ -65,7 +178,7 @@ export async function deleteTeam(teamId) {
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) throw userError || new Error("Usuario no autenticado");
 
-  // Verificar que el usuario pertenece al equipo
+  // 1) Verificar que el usuario pertenece al equipo
   const { data: memberships, error: membershipError } = await supabase
     .from("users_teams")
     .select("user_id, team_id")
@@ -78,11 +191,40 @@ export async function deleteTeam(teamId) {
   const isMember = memberships.some(m => m.user_id === user.id);
   if (!isMember) throw new Error("No perteneces a este equipo");
 
-  // Solo permitir eliminar si es el unico miembro
+  // 2) Solo permitir eliminar si es el unico miembro
   if (memberships.length > 1)
     throw new Error("No puedes eliminar el equipo mientras tenga otros miembros");
 
-  // Eliminar relaciones y luego el equipo
+  // 3) Obtener nombre del equipo (para borrar eventos antiguos sin team_id)
+  const { data: teamRow, error: teamFetchError } = await supabase
+    .from("teams")
+    .select("name")
+    .eq("id", teamId)
+    .single();
+
+  if (teamFetchError) throw teamFetchError;
+  const teamName = teamRow?.name || "";
+
+  // 4) Borrar eventos del equipo (NUEVOS con team_id)
+  const { error: evByIdError } = await supabase
+    .from("events")
+    .delete()
+    .eq("team_id", teamId);
+
+  if (evByIdError) throw evByIdError;
+
+  // 5) Borrar eventos ANTIGUOS (sin team_id, por título)
+  // Ej: "Entrene Cadete A de 18:00 a 19:00"
+  if (teamName) {
+    const { error: evByTitleError } = await supabase
+      .from("events")
+      .delete()
+      .ilike("title", `Entrene ${teamName}%`);
+
+    if (evByTitleError) throw evByTitleError;
+  }
+
+  // 6) Eliminar relaciones
   const { error: relError } = await supabase
     .from("users_teams")
     .delete()
@@ -90,6 +232,7 @@ export async function deleteTeam(teamId) {
 
   if (relError) throw relError;
 
+  // 7) Eliminar equipo
   const { error: teamError } = await supabase
     .from("teams")
     .delete()

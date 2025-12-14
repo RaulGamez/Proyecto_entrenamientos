@@ -6,6 +6,8 @@ import "dayjs/locale/es";
 import { supabase } from "../lib/supabase";
 import { styles } from "./styles";
 import { getEvents, getTasks } from "../lib/queries.js"
+import { useFocusEffect } from "expo-router";
+
 
 // Combina fecha y hora en un objeto Date
 function combineDateAndTime(baseDate, hhmm) {
@@ -17,7 +19,8 @@ function combineDateAndTime(baseDate, hhmm) {
 export function Main() {
   // ----------- CALENDARIO -----------
   const [events, setEvents] = useState([]);
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [todayDate] = useState(() => new Date());      // fijo: hoy
+  const [calendarDate, setCalendarDate] = useState(() => new Date()); // mes visible
   const [selectedDate, setSelectedDate] = useState(null);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -31,7 +34,7 @@ export function Main() {
   const [errorMsg, setErrorMsg] = useState("");
 
   const memoEvents = useMemo(() => events, [events]);
-  const lastMonthKeyRef = useRef(dayjs(currentDate).format("YYYY-MM"));
+  const lastMonthKeyRef = useRef(dayjs(calendarDate).format("YYYY-MM"));
 
   // ----------- TAREAS -----------
   const [tasks, setTasks] = useState([]);
@@ -57,30 +60,43 @@ export function Main() {
     })();
   }, []);
 
-  // ----------- NAVEGACIÓN MES -----------
-  const goPrevMonth = () => setCurrentDate(dayjs(currentDate).subtract(1, "month").toDate());
-  const goNextMonth = () => setCurrentDate(dayjs(currentDate).add(1, "month").toDate());
-
-  const handleRangeChange = useCallback(
-    (range) => {
-      let start;
-      if (Array.isArray(range) && range.length > 0) {
-        const nums = range.map((d) => (d instanceof Date ? d.getTime() : new Date(d).getTime()));
-        start = dayjs(Math.min(...nums));
-      } else if (range && range.start) {
-        start = dayjs(range.start);
-      } else {
-        start = dayjs(currentDate).startOf("month");
-      }
-      const midDate = start.add(2, "week").toDate();
-      const newMonthKey = dayjs(midDate).format("YYYY-MM");
-      if (lastMonthKeyRef.current !== newMonthKey) {
-        lastMonthKeyRef.current = newMonthKey;
-        setCurrentDate(midDate);
-      }
-    },
-    [currentDate]
+  useFocusEffect(
+    useCallback(() => {
+      let alive = true;
+      (async () => {
+        const e = await getEvents();
+        if (alive) setEvents(e);
+      })();
+      return () => { alive = false; };
+    }, [])
   );
+
+  // ----------- NAVEGACIÓN MES -----------
+  const goPrevMonth = () => setCalendarDate(dayjs(calendarDate).subtract(1, "month").toDate());
+  const goNextMonth = () => setCalendarDate(dayjs(calendarDate).add(1, "month").toDate());
+
+  const handleRangeChange = useCallback((range) => {
+    let start;
+
+    if (Array.isArray(range) && range.length > 0) {
+      const nums = range.map((d) =>
+        d instanceof Date ? d.getTime() : new Date(d).getTime()
+      );
+      start = dayjs(Math.min(...nums));
+    } else if (range?.start) {
+      start = dayjs(range.start);
+    } else {
+      start = dayjs(calendarDate).startOf("month");
+    }
+
+    const midDate = start.add(2, "week").toDate(); // tu lógica original (funciona bien con esa lib)
+    const newMonthKey = dayjs(midDate).format("YYYY-MM");
+
+    if (lastMonthKeyRef.current !== newMonthKey) {
+      lastMonthKeyRef.current = newMonthKey;
+      setCalendarDate(midDate);
+    }
+  }, [calendarDate]);
 
   const highlightDateCell = useCallback((date) => {
     const isSelected = selectedDate && dayjs(date).isSame(selectedDate, "day");
@@ -93,10 +109,14 @@ export function Main() {
   // ----------- RENDER EVENTO (month) -----------
   const renderMonthEvent = (event) => {
     const timeLabel = dayjs(event.start).format("HH:mm");
+    const isTraining = String(event.title || "").startsWith("Entrene ");
+
     return (
-      <View style={styles.eventChip}>
+      <View style={[styles.eventChip, isTraining && styles.eventChipTraining]}>
         <Text numberOfLines={1} style={styles.eventText}>
-          <Text style={styles.eventTime}>{timeLabel} </Text>
+          <Text style={[styles.eventTime, isTraining && styles.eventTimeTraining]}>
+            {timeLabel}{" "}
+          </Text>
           {event.title}
         </Text>
       </View>
@@ -138,6 +158,20 @@ export function Main() {
     setErrorMsg("");
     setModalOpen(true);
   };
+
+  // ----------- COMPONENTE ESTADO VACÍO -----------
+  const EmptyState = ({ icon = "📭", title, text }) => (
+    <View style={[styles.emptyStateCard, styles.cardShadow]}>
+      <View style={styles.emptyStateIcon}>
+        <Text>{icon}</Text>
+      </View>
+
+      <View style={{ flex: 1 }}>
+        <Text style={styles.emptyStateTitle}>{title}</Text>
+        <Text style={styles.emptyStateText}>{text}</Text>
+      </View>
+    </View>
+  );
 
   // ----------- CRUD EVENTOS (Supabase) -----------
   const saveEvent = async () => {
@@ -202,9 +236,9 @@ export function Main() {
   // ----------- DERIVADOS PARA EL DASHBOARD -----------
   const todaysAgenda = useMemo(() => {
     return memoEvents
-      .filter((ev) => dayjs(ev.start).isSame(currentDate, "day"))
+      .filter((ev) => dayjs(ev.start).isSame(todayDate, "day"))
       .sort((a, b) => dayjs(a.start).valueOf() - dayjs(b.start).valueOf());
-  }, [memoEvents, currentDate]);
+  }, [memoEvents, calendarDate]);
 
   // Los 3 próximos eventos a partir de ahora
   const nextThreeEvents = useMemo(() => {
@@ -295,14 +329,16 @@ export function Main() {
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
             <Text style={styles.welcomeTitle}>Bienvenido, Coach 👋</Text>
           </View>
-          <Text style={styles.welcomeDate}>{dayjs(currentDate).locale("es").format("dddd, D [de] MMMM YYYY")}</Text>
+          <Text style={styles.welcomeDate}>
+            {dayjs(todayDate).locale("es").format("dddd, D [de] MMMM YYYY")}
+          </Text>
         </View>
 
         {/* Calendario + botón nuevo evento */}
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Calendario</Text>
-            <TouchableOpacity style={styles.primaryBtn} onPress={() => openCreateModalFor(selectedDate || currentDate)}>
+            <TouchableOpacity style={styles.primaryBtn} onPress={() => openCreateModalFor(selectedDate || todayDate)}>
               <Text style={styles.primaryBtnText}>+ Evento</Text>
             </TouchableOpacity>
           </View>
@@ -312,7 +348,7 @@ export function Main() {
             <TouchableOpacity style={styles.navBtn} onPress={goPrevMonth}>
               <Text style={styles.navBtnText}>〈</Text>
             </TouchableOpacity>
-            <Text style={styles.monthTitle}>{dayjs(currentDate).locale("es").format("MMMM [de] YYYY")}</Text>
+            <Text style={styles.monthTitle}>{dayjs(calendarDate).locale("es").format("MMMM [de] YYYY")}</Text>
             <TouchableOpacity style={styles.navBtn} onPress={goNextMonth}>
               <Text style={styles.navBtnText}>〉</Text>
             </TouchableOpacity>
@@ -327,7 +363,7 @@ export function Main() {
               weekStartsOn={1}
               mode="month"
               swipeEnabled
-              date={currentDate}
+              date={calendarDate}
               onChangeDate={handleRangeChange}
               onPressEvent={(event) => openEditModalFor(event)}
               onPressCell={(date) => {
@@ -356,7 +392,11 @@ export function Main() {
           </View>
 
           {todaysAgenda.length === 0 ? (
-            <Text style={styles.emptyText}>No hay eventos para hoy.</Text>
+            <EmptyState
+              icon="🗓️"
+              title="Sin eventos hoy"
+              text="No tienes nada programado para hoy."
+            />
           ) : (
             todaysAgenda.map((ev) => (
               <TouchableOpacity key={ev.id} style={[styles.agendaItem, styles.cardShadow]} onPress={() => openEditModalFor(ev)}>
@@ -382,7 +422,11 @@ export function Main() {
           </View>
 
           {nextThreeEvents.length === 0 ? (
-            <Text style={styles.emptyText}>No hay eventos próximos.</Text>
+            <EmptyState
+              icon="⏳"
+              title="Sin próximos eventos"
+              text="Cuando tengas eventos futuros aparecerán aquí."
+            />
           ) : (
             nextThreeEvents.map((ev) => {
               const d = dayjs(ev.start);
@@ -415,7 +459,7 @@ export function Main() {
 
                   {/* Acción (opcional) */}
                   <View style={styles.reminderRight}>
-                    <Text style={styles.reminderAction}>📅</Text>
+                    <Text style={styles.reminderAction}>🗓️</Text>
                   </View>
                 </View>
               );
@@ -433,7 +477,11 @@ export function Main() {
           </View>
 
           {tasks.length === 0 ? (
-            <Text style={styles.emptyText}>Aún no tienes tareas. Crea la primera con el botón de arriba.</Text>
+            <EmptyState
+              icon="✅"
+              title="Todo al día"
+              text="No tienes tareas pendientes."
+            />
           ) : (
             tasks.map((t) => (
               <View key={t.id} style={[styles.taskItem, styles.cardShadow]}>
