@@ -173,13 +173,13 @@ export default function Entrenamientos() {
   };
 
   const renderEmptyTrainings = () => (
-    <View style={styles.emptyCard}>
-      <View style={styles.emptyIconCircle}>
+    <View style={tstyles.emptyCard}>
+      <View style={tstyles.emptyIconCircle}>
         <Text style={{ fontSize: 26 }}>🏀</Text>
       </View>
-      <Text style={styles.emptyText}>Aún no has creado ningún entrenamiento</Text>
-      <Pressable style={styles.primaryButton} onPress={openTrainingCreator}>
-        <Text style={styles.primaryButtonText}>
+      <Text style={tstyles.emptyText}>Aún no has creado ningún entrenamiento</Text>
+      <Pressable style={tstyles.primaryButton} onPress={openTrainingCreator}>
+        <Text style={tstyles.primaryButtonText}>
           + Crear tu primer entrenamiento
         </Text>
       </Pressable>
@@ -187,13 +187,13 @@ export default function Entrenamientos() {
   );
 
   const renderEmptyExercises = () => (
-    <View style={styles.emptyCard}>
-      <View style={styles.emptyIconCircle}>
+    <View style={tstyles.emptyCard}>
+      <View style={tstyles.emptyIconCircle}>
         <Text style={{ fontSize: 26 }}>📋</Text>
       </View>
-      <Text style={styles.emptyText}>Aún no has creado ningún ejercicio</Text>
-      <Pressable style={styles.primaryButton} onPress={openExerciseCreator}>
-        <Text style={styles.primaryButtonText}>
+      <Text style={tstyles.emptyText}>Aún no has creado ningún ejercicio</Text>
+      <Pressable style={tstyles.primaryButton} onPress={openExerciseCreator}>
+        <Text style={tstyles.primaryButtonText}>
           + Crear tu primer ejercicio
         </Text>
       </Pressable>
@@ -559,39 +559,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 13,
   },
-  emptyCard: {
-    marginTop: 12,
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: "#d1d1d1ff",
-    alignItems: "center",
-    gap: 12,
-  },
-  emptyIconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#edeff2ff",
-  },
-  emptyText: {
-    color: "#4b5563",
-    fontSize: 14,
-  },
-  primaryButton: {
-    marginTop: 8,
-    borderRadius: 999,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    backgroundColor: "#edeff2ff",
-  },
-  primaryButtonText: {
-    color: "#000",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-
   // tarjeta de entrenamiento
   trainingCard: {
     backgroundColor: "#ffffffff",
@@ -663,7 +630,6 @@ const styles = StyleSheet.create({
     color: "#ffffffff",
     fontSize: 12,
   },
-
   statsRow: {
     flexDirection: "row",
     marginBottom: 10,
@@ -693,7 +659,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#111827",
   },
-
   sectionLabel: {
     marginTop: 12,
     marginHorizontal: 10,
@@ -721,7 +686,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#4b5563",
   },
-
   //buscador
     searchContainer: {
     marginBottom: 8,
@@ -737,8 +701,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#111827",
   },
-
-    searchContainer: {
+  searchContainer: {
     marginBottom: 8,
     marginTop: 4,
   },
@@ -752,7 +715,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#111827",
   },
-
   sectionHeader: {
     marginTop: 12,
     marginBottom: 4,

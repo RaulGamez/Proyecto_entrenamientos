@@ -1,13 +1,5 @@
 // app/(tabs)/equipo.js
-import {
-  View,
-  Text,
-  FlatList,
-  Pressable,
-  ActivityIndicator,
-  StyleSheet,
-  TextInput,
-} from "react-native";
+import { View, Text, FlatList, Pressable, ActivityIndicator, StyleSheet, TextInput} from "react-native";
 import { useRouter, Stack, useFocusEffect } from "expo-router";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";

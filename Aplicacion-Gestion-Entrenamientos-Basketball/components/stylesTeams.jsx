@@ -145,6 +145,37 @@ export const teamStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-  }
-
+  },
+  emptyCard: {
+    marginTop: 12,
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: "#d1d1d1ff",
+    alignItems: "center",
+    gap: 12,
+  },
+  emptyIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#edeff2ff",
+  },
+  emptyText: {
+    color: "#4b5563",
+    fontSize: 14,
+  },
+  primaryButton: {
+    marginTop: 8,
+    borderRadius: 999,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    backgroundColor: "#edeff2ff",
+  },
+  primaryButtonText: {
+    color: "#000",
+    fontWeight: "600",
+    fontSize: 14,
+  },
 });
