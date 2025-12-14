@@ -8,7 +8,8 @@ export default function TabsLayout() {
         screenOptions={{
             headerShown: true, // titulo en la parte superior
             tabBarShowLabel: false, // textos debajo de los iconos de la barra inferior
-        }}>
+        }}
+        initialRouteName="index">
             <Tabs.Screen
             name="entrenamientos"
             options={{
