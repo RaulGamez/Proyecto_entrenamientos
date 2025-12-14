@@ -327,7 +327,7 @@ export function Main() {
         {/* Cabecera bienvenida */}
         <View style={styles.welcomeCard}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-            <Text style={styles.welcomeTitle}>Bienvenido, Coach 👋</Text>
+            <Text style={styles.welcomeTitle}>Bienvenido, Coach 🏀</Text>
           </View>
           <Text style={styles.welcomeDate}>
             {dayjs(todayDate).locale("es").format("dddd, D [de] MMMM YYYY")}
