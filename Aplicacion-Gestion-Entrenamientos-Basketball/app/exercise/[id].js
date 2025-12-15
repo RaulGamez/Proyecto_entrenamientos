@@ -8,6 +8,8 @@ import { teamStyles as styles } from "../../components/stylesTeams";
 import { CloseIcon } from "../../components/icons";
 import { TrashIcon } from "../../components/icons";
 import { deleteExerciseBoardPng } from "../../lib/queries";
+import * as FileSystem from "expo-file-system/legacy";
+import * as Sharing from "expo-sharing";
 
 export default function ExerciseDetail() {
   const router = useRouter();
@@ -110,6 +112,32 @@ export default function ExerciseDetail() {
       ]
     );
   };
+
+  const shareBoardImage = async () => {
+    try {
+      if (!exercise?.board_image_url) return;
+
+      const canShare = await Sharing.isAvailableAsync();
+      if (!canShare) {
+        Alert.alert("No disponible", "Compartir no está disponible en este dispositivo.");
+        return;
+      }
+
+      const fileUri =
+        FileSystem.cacheDirectory + `board_${exercise.id}_${Date.now()}.png`;
+
+      const res = await FileSystem.downloadAsync(exercise.board_image_url, fileUri);
+
+      await Sharing.shareAsync(res.uri, {
+        mimeType: "image/png",
+        dialogTitle: "Compartir pizarra",
+      });
+    } catch (e) {
+      console.error(e);
+      Alert.alert("Error", "No se pudo compartir la pizarra.");
+    }
+  };
+
 
 
   if (loading) {
@@ -368,21 +396,45 @@ export default function ExerciseDetail() {
             alignItems: "center",
           }}
         >
-          {/* Botón cerrar */}
-          <Pressable
-            onPress={() => setShowBoardModal(false)}
+          {/* Barra superior: compartir + cerrar */}
+          <View
             style={{
               position: "absolute",
               top: 40,
               right: 20,
+              left: 20,
               zIndex: 10,
-              backgroundColor: "rgba(255,255,255,0.15)",
-              borderRadius: 20,
-              padding: 8,
+              flexDirection: "row",
+              justifyContent: "flex-end",
+              gap: 10,
             }}
           >
-            <Text style={{ color: "#fff", fontSize: 18 }}>✕</Text>
-          </Pressable>
+            {/* Compartir */}
+            <Pressable
+              onPress={shareBoardImage}
+              style={{
+                backgroundColor: "rgba(255,255,255,0.15)",
+                borderRadius: 20,
+                paddingVertical: 8,
+                paddingHorizontal: 12,
+              }}
+            >
+              <Text style={{ color: "#fff", fontSize: 18 }}>📤</Text>
+            </Pressable>
+
+            {/* Cerrar */}
+            <Pressable
+              onPress={() => setShowBoardModal(false)}
+              style={{
+                backgroundColor: "rgba(255,255,255,0.15)",
+                borderRadius: 20,
+                paddingVertical: 8,
+                paddingHorizontal: 12,
+              }}
+            >
+              <Text style={{ color: "#fff", fontSize: 18 }}>✕</Text>
+            </Pressable>
+          </View>
 
           {/* Imagen grande */}
           <Image
