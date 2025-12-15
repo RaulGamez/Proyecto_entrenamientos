@@ -8,7 +8,7 @@ import { teamStyles as styles } from "../../components/stylesTeams";
 import { ProgressBar } from "../../components/ProgressBar";
 import { EmptyPlayers } from "../../components/EmptyPlayers";
 import { CloseIcon } from "../../components/icons";
-import { getTeamById, getUserPlayers, getTeamPlayers, createPlayer, updateTeamPlayers } from "../../lib/queries";
+import { getTeamById, getUserPlayers, getTeamPlayers, createPlayer, updateTeamPlayers, deleteTeam } from "../../lib/queries";
 import { PlayerCard } from "../../components/PlayerCard";
 
 
@@ -51,10 +51,13 @@ export default function TeamDetail() {
   const [savingPlayer, setSavingPlayer] = useState(false);
 
   // paginación
+  const FIRST_LOAD_SIZE_MATCHES = 5;
   const PAGE_SIZE_MATCHES = 10;
-  const PAGE_SIZE_PLAYERS = 10;
+
   const [loadingMoreMatches, setLoadingMoreMatches] = useState(false);
-  const [loadingMorePlayers, setLoadingMorePlayers] = useState(false);
+  const [hasMoreMatches, setHasMoreMatches] = useState(false);
+  const [loadAllMatches, setLoadAllMatches] = useState(false);
+  const [loadAllPlayers, setLoadAllPlayers] = useState(false);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -77,6 +80,10 @@ export default function TeamDetail() {
       created_at: data.created_at,
       creator: data.creator,
     });
+
+    setHasMoreMatches(data.matches.length > FIRST_LOAD_SIZE_MATCHES);
+    //setLoadAllMatches(!hasMoreMatches);
+
     setMatches(data.matches ?? []);
     setPlayers(data.players ?? []);
 
@@ -124,7 +131,8 @@ export default function TeamDetail() {
         text: "Borrar",
         style: "destructive",
         onPress: async () => {
-          await supabase.from("teams").delete().eq("id", id);
+          const {error} = await deleteTeam(id);
+          if (error) throw error;
           router.back();
         },
       },
@@ -194,53 +202,34 @@ export default function TeamDetail() {
 
   // Cargar más PARTIDOS
   const loadMoreMatches = async () => {
-    if (!id || loadingMoreMatches) return;
     setLoadingMoreMatches(true);
     try {
       const from = matches.length;
-      const to = from + PAGE_SIZE_MATCHES - 1;
+      const to = from + PAGE_SIZE_MATCHES-1;
 
       const { data, error } = await supabase
         .from('matches')
-        .select('id, opponent, date, our_pts, opp_pts, result')
+        .select("*")
         .eq('team_id', id)
         .order('date', { ascending: false })
         .range(from, to);
 
       if (error) throw error;
-      if (data && data.length) {
-        setMatches(prev => [...prev, ...data]);
-      }
+
+      const hasMore = data.length === PAGE_SIZE_MATCHES;
+
+      setHasMoreMatches(hasMore);
+      setLoadAllMatches(!hasMore);
+      console.log("hasMore: " + hasMore + ", loadAllMatches2: " + loadAllMatches);
+
+      setMatches(prev => [...prev, ...data]);
+
+      console.log("Matches length: " + matches.length);
+
     } catch (e) {
       Alert.alert('Error', e.message || String(e));
     } finally {
       setLoadingMoreMatches(false);
-    }
-  };
-
-  // Cargar más JUGADORES
-  const loadMorePlayers = async () => {
-    if (!id || loadingMorePlayers) return;
-    setLoadingMorePlayers(true);
-    try {
-      const from = players.length;
-      const to = from + PAGE_SIZE_PLAYERS - 1;
-
-      const { data, error } = await supabase
-        .from('players')
-        .select('id, name, number, role, status')
-        .eq('team_id', id)
-        .order('name', { ascending: true })
-        .range(from, to);
-
-      if (error) throw error;
-      if (data && data.length) {
-        setPlayers(prev => [...prev, ...data]);
-      }
-    } catch (e) {
-      Alert.alert('Error', e.message || String(e));
-    } finally {
-      setLoadingMorePlayers(false);
     }
   };
 
@@ -386,7 +375,10 @@ export default function TeamDetail() {
               <Muted>No hay partidos registrados aún</Muted>
             ) : (
               <>
-                {matches.map((m) => (
+                {matches
+                .slice(0, (hasMoreMatches ? matches.length-1
+                  : (loadAllMatches ? matches.length : FIRST_LOAD_SIZE_MATCHES)))
+                .map((m) => (
                   <Pressable
                     key={m.id}
                     style={rowStyle}
@@ -409,14 +401,19 @@ export default function TeamDetail() {
                   </Pressable>
                 ))}
 
-                {matches.length >= 5 && (
+                {matches.length > FIRST_LOAD_SIZE_MATCHES && (
                   <Pressable
-                    onPress={loadMoreMatches}
+                    onPress={hasMoreMatches ? loadMoreMatches : () => {
+                      console.log("LoadAllMatches actual: " + loadAllMatches);
+                      setLoadAllMatches(!loadAllMatches);
+                    }}
                     style={[styles.lightButton, { marginTop: 12, alignSelf: "center", paddingHorizontal: 16 }]}
                     disabled={loadingMoreMatches}
                   >
                     <Text style={styles.lightText}>
-                      {loadingMoreMatches ? "Cargando…" : "Ver más partidos"}
+                      {loadingMoreMatches ? "Cargando…"
+                      : (hasMoreMatches ? "Ver más partidos"
+                      : (loadAllMatches ? "Volver a ocultar" : "Mostrar todos"))}
                     </Text>
                   </Pressable>
                 )}
@@ -441,7 +438,9 @@ export default function TeamDetail() {
               <Muted>No hay jugadores todavía</Muted>
             ) : (
               <>
-                {players.map((p) => (
+                {players
+                .slice(0, loadAllPlayers ? players.length : 5)
+                .map((p) => (
                   <Pressable
                     key={p.id}
                     style={rowStyle}
@@ -466,12 +465,11 @@ export default function TeamDetail() {
 
                 {players.length >= 6 && (
                   <Pressable
-                    onPress={loadMorePlayers}
+                    onPress={() => setLoadAllPlayers(!loadAllPlayers)}
                     style={[styles.lightButton, { marginTop: 12, alignSelf: "center", paddingHorizontal: 16 }]}
-                    disabled={loadingMorePlayers}
                   >
                     <Text style={styles.lightText}>
-                      {loadingMorePlayers ? "Cargando…" : "Ver más jugadores"}
+                      {loadAllPlayers ? "Volver a ocultar" : "Mostrar todos"}
                     </Text>
                   </Pressable>
                 )}

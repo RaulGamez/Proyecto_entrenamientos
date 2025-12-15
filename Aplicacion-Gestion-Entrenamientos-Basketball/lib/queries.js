@@ -178,69 +178,16 @@ export async function deleteTeam(teamId) {
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) throw userError || new Error("Usuario no autenticado");
 
-  // 1) Verificar que el usuario pertenece al equipo
-  const { data: memberships, error: membershipError } = await supabase
-    .from("users_teams")
-    .select("user_id, team_id")
-    .eq("team_id", teamId);
-
-  if (membershipError) throw membershipError;
-  if (!memberships || memberships.length === 0)
-    throw new Error("El equipo no existe");
-
-  const isMember = memberships.some(m => m.user_id === user.id);
-  if (!isMember) throw new Error("No perteneces a este equipo");
-
-  // 2) Solo permitir eliminar si es el unico miembro
-  if (memberships.length > 1)
-    throw new Error("No puedes eliminar el equipo mientras tenga otros miembros");
-
-  // 3) Obtener nombre del equipo (para borrar eventos antiguos sin team_id)
-  const { data: teamRow, error: teamFetchError } = await supabase
-    .from("teams")
-    .select("name")
-    .eq("id", teamId)
-    .single();
-
-  if (teamFetchError) throw teamFetchError;
-  const teamName = teamRow?.name || "";
-
-  // 4) Borrar eventos del equipo (NUEVOS con team_id)
-  const { error: evByIdError } = await supabase
-    .from("events")
-    .delete()
-    .eq("team_id", teamId);
-
-  if (evByIdError) throw evByIdError;
-
-  // 5) Borrar eventos ANTIGUOS (sin team_id, por título)
-  // Ej: "Entrene Cadete A de 18:00 a 19:00"
-  if (teamName) {
-    const { error: evByTitleError } = await supabase
-      .from("events")
-      .delete()
-      .ilike("title", `Entrene ${teamName}%`);
-
-    if (evByTitleError) throw evByTitleError;
-  }
-
-  // 6) Eliminar relaciones
-  const { error: relError } = await supabase
+  // No se elimina directamente de teams, el usuario se va del equipo y supabase se encarga de eliminar los equipos sin propietario
+  const {error: deleteError} = await supabase
     .from("users_teams")
     .delete()
+    .eq("user_id", user.id)
     .eq("team_id", teamId);
 
-  if (relError) throw relError;
+  if (deleteError) return {error: deleteError};
 
-  // 7) Eliminar equipo
-  const { error: teamError } = await supabase
-    .from("teams")
-    .delete()
-    .eq("id", teamId);
-
-  if (teamError) throw teamError;
-
-  return true;
+  return {error: null};
 }
 
 export async function createPlayer({player, teams}) {
@@ -647,10 +594,7 @@ export async function getTeamById(teamId) {
     .eq("id", teamId)
     // Ordenar matches
     .order("date", { foreignTable: "matches", ascending: false })
-    .limit(5, { foreignTable: "matches" })
-    // Ordenar players
-    .order("name", { foreignTable: "teams_players.players", ascending: true })
-    .limit(6, { foreignTable: "teams_players.players" })
+    .limit(6, { foreignTable: "matches" })
     .single();
 
   if (error) {
