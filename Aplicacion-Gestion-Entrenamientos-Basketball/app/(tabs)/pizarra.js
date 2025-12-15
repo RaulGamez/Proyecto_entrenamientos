@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet, Alert} from "react-native";
 import { LockIcon } from "../../components/icons";
 import { router, Stack } from "expo-router";
 import { supabase } from "../../lib/supabase";
@@ -7,12 +7,14 @@ import { Canvas, Path, Skia, Group, Circle } from "@shopify/react-native-skia";
 import { useCanvasRef, ImageFormat } from "@shopify/react-native-skia";
 import { saveExerciseBoardPng } from "../../lib/queries";
 import { useLocalSearchParams } from "expo-router";
-import * as Print from "expo-print";
+import { createExerciseWithBoard } from "../../lib/queries";
 import * as Sharing from "expo-sharing";
+import * as FileSystem from "expo-file-system/legacy";
 
 
 export default function Pizarra() {
   const canvasRef = useCanvasRef();
+  const nowISO = new Date().toISOString();
   const params = useLocalSearchParams();
   const exerciseId = Array.isArray(params.exerciseId)
   ? params.exerciseId[0]
@@ -551,6 +553,12 @@ export default function Pizarra() {
     router.replace("/login");
   };
 
+  
+  const getBoardBase64Png = () => {
+    if (!canvasRef.current) return null;
+    const image = canvasRef.current.makeImageSnapshot();
+    return image.encodeToBase64(ImageFormat.PNG, 100);
+  };
 
   // Guardar pizarra
   const saveBoard = async () => {
@@ -575,6 +583,84 @@ export default function Pizarra() {
     } catch (e) {
       console.error(e);
       alert("❌ Error guardando la pizarra");
+    }
+  };
+
+
+  async function snapshotToPngFile(canvasRef) {
+    if (!canvasRef.current) throw new Error("Canvas no listo");
+
+    const image = canvasRef.current.makeImageSnapshot();
+    const base64 = image.encodeToBase64(ImageFormat.PNG, 100);
+
+    const fileUri = FileSystem.cacheDirectory + `board_${Date.now()}.png`;
+
+    await FileSystem.writeAsStringAsync(fileUri, base64, {
+      encoding: FileSystem.EncodingType.Base64, // 👈 ahora SÍ existe porque usas /legacy
+    });
+
+    return fileUri;
+  }
+
+
+  // Compartir imagen (Expo Sharing)
+  const shareBoard = async () => {
+    try {
+      const fileUri = await snapshotToPngFile(canvasRef);
+
+      if (!(await Sharing.isAvailableAsync())) {
+        Alert.alert("No disponible", "Compartir no está disponible");
+        return;
+      }
+
+      await Sharing.shareAsync(fileUri, {
+        mimeType: "image/png",
+      });
+    } catch (e) {
+      console.error(e);
+      Alert.alert("❌ Error", "No se pudo compartir");
+    }
+  };
+
+
+
+  // Guardar como nuevo ejercicio
+  const saveAsNewExercise = async () => {
+    try {
+      const base64 = getBoardBase64Png();
+      if (!base64) return;
+
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+
+      const userId = authData?.user?.id;
+      if (!userId) {
+        Alert.alert("Error", "Usuario no autenticado");
+        return;
+      }
+
+      const payload = {
+        name: `Pizarra ${new Date().toLocaleString()}`,
+        type: "tactics",
+        duration: 0,
+        players: 0,
+        court: "full",
+        description: "Ejercicio creado desde la pizarra",
+        created_by: userId,
+      };
+
+      const { data, error } = await createExerciseWithBoard({
+        exercisePayload: payload,
+        base64Png: base64,
+      });
+
+      if (error) throw error;
+
+      Alert.alert("✅ Ejercicio creado", "Se guardó el ejercicio con la pizarra.");
+      router.replace(`/exercise/${data.exerciseId}`);
+    } catch (e) {
+      console.error(e);
+      Alert.alert("❌ Error", e.message || "No se pudo crear el ejercicio.");
     }
   };
 
@@ -654,8 +740,6 @@ export default function Pizarra() {
           />
 
           <ToolButton label="Clear" onPress={clearAll} />
-          <ToolButton label="Guardar" onPress={saveBoard} />
-
         </View>
 
         {/* Canvas (debajo) */}
@@ -798,6 +882,14 @@ export default function Pizarra() {
               {cones.map(renderCone)}
             </Canvas>
           )}
+        </View>
+        <View
+          style={[styles.toolbar]}
+          pointerEvents="auto"
+        >
+          <ToolButton label="💾" onPress={saveBoard} />
+          <ToolButton label="📤" onPress={shareBoard} />
+          <ToolButton label="💾 como Ejercicio" onPress={saveAsNewExercise} />
         </View>
       </View>
     </>

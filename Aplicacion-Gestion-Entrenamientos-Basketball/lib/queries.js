@@ -737,6 +737,7 @@ export async function saveExerciseBoardPng({ exerciseId, base64Png }) {
   return { data: { url: publicUrl, path: filePath }, error: null };
 }
 
+// Elimina la imagen PNG de la pizarra del ejercicio
 export async function deleteExerciseBoardPng({ exerciseId }) {
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) throw userError || new Error("Usuario no autenticado");
@@ -760,4 +761,21 @@ export async function deleteExerciseBoardPng({ exerciseId }) {
   if (updateError) return { data: null, error: updateError };
 
   return { data: true, error: null };
+}
+
+// Crea ejercicio y guarda la pizarra PNG asociada
+export async function createExerciseWithBoard({ exercisePayload, base64Png }) {
+  // 1) crea ejercicio (tu función ya devuelve exerciseId en tu versión nueva)
+  const { exerciseId, error: createError } = await createExercise(exercisePayload);
+  if (createError) return { data: null, error: createError };
+
+  // 2) guarda PNG vinculado al ejercicio
+  const { data: boardData, error: boardError } = await saveExerciseBoardPng({
+    exerciseId,
+    base64Png,
+  });
+
+  if (boardError) return { data: null, error: boardError };
+
+  return { data: { exerciseId, ...boardData }, error: null };
 }
