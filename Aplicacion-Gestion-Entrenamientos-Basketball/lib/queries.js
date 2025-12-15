@@ -41,6 +41,18 @@ function getSeasonRange(now = dayjs()) {
   };
 }
 
+const EXERCISE_BOARDS_BUCKET = "exercise-boards";
+
+// Convierte base64 -> ArrayBuffer (para subir a Supabase Storage sin Buffer)
+function base64ToArrayBuffer(base64) {
+  const binary = globalThis.atob ? globalThis.atob(base64) : atob(base64);
+  const len = binary.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+
 function* iterateDays(startDayjs, endDayjs) {
   let d = startDayjs.startOf("day");
   const end = endDayjs.startOf("day");
@@ -373,7 +385,7 @@ export async function createExercise(exercise) {
   .insert([{id: exerciseId, ...exercise}]);
   
   if (error) {
-    return {error};
+    return {exerciseId: null, error};
   }
   
   // Relacion en users_teams
@@ -382,10 +394,10 @@ export async function createExercise(exercise) {
     .insert([{ user_id: user.id, exercise_id: exerciseId }]);
 
   if (linkError) {
-    return { error: linkError};
+    return { exerciseId, error: linkError};
   }
 
-  return {error: null};
+  return {exerciseId, error: null};
 }
 
 export async function getUserExercises() {
@@ -404,6 +416,7 @@ export async function getUserExercises() {
       players,
       court,
       description,
+      board_image_url,
       created_at,
       created_by,
       creator:created_by ( username )
@@ -419,6 +432,18 @@ export async function getUserExercises() {
 
   return { data: (data || []).map((d) => d.exercises), error: null};
 }
+
+export async function getExerciseById(exerciseId) {
+  const { data, error } = await supabase
+    .from("exercises")
+    .select("*")
+    .eq("id", exerciseId)
+    .single();
+
+  if (error) return { data: null, error };
+  return { data, error: null };
+}
+
 
 export async function createTraining({training, exercises}) {
   const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -666,4 +691,73 @@ export async function deletePlayers(playersIds) {
   if (deletePlayersError) return {error: deletePlayersError};
 
   return {error: null};
+}
+
+// Guarda la imagen PNG de la pizarra en Supabase Storage y actualiza la URL en la tabla exercises
+export async function saveExerciseBoardPng({ exerciseId, base64Png }) {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) throw userError || new Error("Usuario no autenticado");
+  if (!exerciseId) throw new Error("exerciseId es obligatorio");
+  if (!base64Png) throw new Error("base64Png es obligatorio");
+
+  // Por si viene con "data:image/png;base64,...."
+  const cleanBase64 = base64Png.includes("base64,")
+    ? base64Png.split("base64,")[1]
+    : base64Png;
+
+  const filePath = `${exerciseId}/board.png`;
+  const arrayBuffer = base64ToArrayBuffer(cleanBase64);
+
+  // 1) Subimos a Storage
+  const { error: uploadError } = await supabase.storage
+    .from(EXERCISE_BOARDS_BUCKET)
+    .upload(filePath, arrayBuffer, {
+      contentType: "image/png",
+      upsert: true,
+    });
+
+  if (uploadError) return { data: null, error: uploadError };
+
+  // 2) Sacamos URL pública (bucket público)
+  const { data: pub } = supabase.storage
+    .from(EXERCISE_BOARDS_BUCKET)
+    .getPublicUrl(filePath);
+
+  const publicUrl = pub?.publicUrl || null;
+  if (!publicUrl) return { data: null, error: new Error("No se pudo obtener publicUrl") };
+
+  // 3) Guardamos URL en la tabla exercises
+  const { error: updateError } = await supabase
+    .from("exercises")
+    .update({ board_image_url: publicUrl })
+    .eq("id", exerciseId);
+
+  if (updateError) return { data: null, error: updateError };
+
+  return { data: { url: publicUrl, path: filePath }, error: null };
+}
+
+export async function deleteExerciseBoardPng({ exerciseId }) {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) throw userError || new Error("Usuario no autenticado");
+  if (!exerciseId) throw new Error("exerciseId es obligatorio");
+
+  const filePath = `${exerciseId}/board.png`;
+
+  // 1) borrar archivo del bucket
+  const { error: removeError } = await supabase.storage
+    .from(EXERCISE_BOARDS_BUCKET)
+    .remove([filePath]);
+
+  if (removeError) return { data: null, error: removeError };
+
+  // 2) poner null en la tabla
+  const { error: updateError } = await supabase
+    .from("exercises")
+    .update({ board_image_url: null })
+    .eq("id", exerciseId);
+
+  if (updateError) return { data: null, error: updateError };
+
+  return { data: true, error: null };
 }

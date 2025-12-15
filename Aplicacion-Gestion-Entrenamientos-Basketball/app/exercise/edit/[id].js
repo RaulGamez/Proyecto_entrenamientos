@@ -121,7 +121,7 @@ export default function EditExercise() {
       Alert.alert(
         "✅ Ejercicio actualizado",
         "Los cambios se guardaron correctamente",
-        [{ text: "OK", onPress: () => router.replace("/entrenamientos?tab=exercises") }]
+        [{ text: "OK", onPress: () =>  router.replace(`/exercise/${id}`) }]
       );
     } catch (e) {
       setError(e.message || "Error al guardar");
@@ -230,7 +230,12 @@ export default function EditExercise() {
             backgroundColor: "#eef2ff",
             },
         ]}
-        onPress={() => router.push("/pizarra")}
+        onPress={() =>
+          router.push({
+            pathname: "/pizarra",
+            params: { exerciseId: String(id) },
+          })
+        }
         >
         <Text style={[styles.lightText, { color: "#1d1b7f" }]}>
             Ir a Pizarra Táctica

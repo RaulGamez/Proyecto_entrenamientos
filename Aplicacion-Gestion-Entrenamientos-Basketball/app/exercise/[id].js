@@ -1,17 +1,13 @@
 // app/exercise/[id].js
 import React, { useState, useEffect } from "react";
-import {
-  ScrollView,
-  View,
-  Text,
-  Pressable,
-  Alert,
-  ActivityIndicator,
-} from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { ScrollView, View, Text, Pressable, Alert, ActivityIndicator, Image, RefreshControl, Modal, Dimensions,} from "react-native";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
+import { useCallback } from "react";
 import { supabase } from "../../lib/supabase";
 import { teamStyles as styles } from "../../components/stylesTeams";
 import { CloseIcon } from "../../components/icons";
+import { TrashIcon } from "../../components/icons";
+import { deleteExerciseBoardPng } from "../../lib/queries";
 
 export default function ExerciseDetail() {
   const router = useRouter();
@@ -20,22 +16,38 @@ export default function ExerciseDetail() {
   const [exercise, setExercise] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!id) return;
-    (async () => {
-      const { data, error } = await supabase
-        .from("exercises")
-        .select("*")
-        .eq("id", id)
-        .single();
+  const [refreshing, setRefreshing] = useState(false);
+  const [showBoardModal, setShowBoardModal] = useState(false);
 
-      if (error) {
-        console.log("Error loading exercise", error);
-      }
-      setExercise(data || null);
-      setLoading(false);
-    })();
-  }, [id]);
+  const fetchExercise = async () => {
+    if (!id) return;
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from("exercises")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (error) console.log("Error loading exercise", error);
+
+    setExercise(data || null);
+    setLoading(false);
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchExercise();
+    }, [id])
+  );
+
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchExercise();
+    setRefreshing(false);
+  };
+
 
   const handleDelete = async () => {
     Alert.alert(
@@ -68,8 +80,37 @@ export default function ExerciseDetail() {
   };
 
   const handleGoToBoard = () => {
-    router.push("/pizarra");
+    router.push({
+      pathname: "/pizarra",
+      params: { exerciseId: String(id) },
+    });
   };
+
+  const handleDeleteBoard = () => {
+    Alert.alert(
+      "Borrar pizarra",
+      "¿Seguro que quieres borrar la pizarra guardada?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Borrar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const { error } = await deleteExerciseBoardPng({
+                exerciseId: String(id),
+              });
+              if (error) throw error;
+              await fetchExercise();
+            } catch (e) {
+              Alert.alert("Error", e.message || "No se pudo borrar la pizarra");
+            }
+          },
+        },
+      ]
+    );
+  };
+
 
   if (loading) {
     return (
@@ -113,7 +154,10 @@ export default function ExerciseDetail() {
   const description = exercise.description || "";
 
   return (
-    <ScrollView style={styles.screen}>
+    <ScrollView style={styles.screen} 
+      refreshControl={
+      <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+    }>
       {/* CABECERA SIMPLE + BOTÓN CERRAR */}
       <View
         style={{
@@ -137,7 +181,7 @@ export default function ExerciseDetail() {
 
         {/* Botón cerrar en la esquina */}
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => router.replace("/entrenamientos?tab=exercises")}
           style={{
             position: "absolute",
             top: 40,
@@ -200,9 +244,72 @@ export default function ExerciseDetail() {
         >
           <Text style={{ color: "#4b5563", fontSize: 13 }}>
             {exercise.description ||
-              "Aún no has añadido descripción para este ejercicio."}
+              "No hay descripción para este ejercicio."}
           </Text>
         </View>
+
+        <Text style={[styles.sectionTitle, { marginTop: 20 }]}>
+          Pizarra táctica
+        </Text>
+
+        {exercise.board_image_url ? (
+          <View
+            style={{
+              marginTop: 8,
+              borderRadius: 12,
+              overflow: "hidden",
+              borderWidth: 1,
+              borderColor: "#e5e7eb",
+              backgroundColor: "#fff",
+            }}
+          >
+            <View style={{ position: "relative" }}>
+              {/* Imagen (click para ver en grande) */}
+              <Pressable onPress={() => setShowBoardModal(true)}>
+                <Image
+                  source={{ uri: exercise.board_image_url }}
+                  style={{ width: "100%", height: 220 }}
+                  resizeMode="contain"
+                />
+              </Pressable>
+
+              {/* ICONO PAPELERA */}
+              <Pressable
+                onPress={handleDeleteBoard}
+                style={{
+                  position: "absolute",
+                  top: 8,
+                  right: 8,
+                  backgroundColor: "rgba(0,0,0,0.6)",
+                  borderRadius: 18,
+                  width: 36,
+                  height: 36,
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+                hitSlop={10}
+              >
+                <TrashIcon size={18} color="#fff" />
+              </Pressable>
+            </View>
+          </View>
+        ) : (
+          <View
+            style={{
+              marginTop: 8,
+              borderRadius: 10,
+              backgroundColor: "#f9fafb",
+              padding: 12,
+              borderWidth: 1,
+              borderColor: "#e5e7eb",
+            }}
+          >
+            <Text style={{ color: "#6b7280", fontSize: 13 }}>
+              Aún no has guardado ninguna pizarra para este ejercicio.
+            </Text>
+          </View>
+        )}
+
 
         {/* BOTÓN IR A PIZARRA */}
         <Pressable
@@ -247,6 +354,47 @@ export default function ExerciseDetail() {
           </Pressable>
         </View>
       </View>
+      <Modal
+        visible={showBoardModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowBoardModal(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.95)",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          {/* Botón cerrar */}
+          <Pressable
+            onPress={() => setShowBoardModal(false)}
+            style={{
+              position: "absolute",
+              top: 40,
+              right: 20,
+              zIndex: 10,
+              backgroundColor: "rgba(255,255,255,0.15)",
+              borderRadius: 20,
+              padding: 8,
+            }}
+          >
+            <Text style={{ color: "#fff", fontSize: 18 }}>✕</Text>
+          </Pressable>
+
+          {/* Imagen grande */}
+          <Image
+            source={{ uri: exercise.board_image_url }}
+            style={{
+              width: Dimensions.get("window").width,
+              height: Dimensions.get("window").height,
+            }}
+            resizeMode="contain"
+          />
+        </View>
+      </Modal>
     </ScrollView>
   );
 }

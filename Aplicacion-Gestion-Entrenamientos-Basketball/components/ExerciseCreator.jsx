@@ -5,6 +5,8 @@ import { supabase } from "../lib/supabase";
 import { useUser } from "../contexts/UserContexts";
 import { styles as baseStyles } from "./styles";
 import { createExercise } from "../lib/queries";
+import { useRouter } from "expo-router";
+
 
 const COURT_OPTIONS = [
   { value: "full", label: "Pista completa" },
@@ -22,7 +24,8 @@ const EXERCISE_TYPES = [
   { value: "other", label: "Otros" },
 ];
 
-export function ExerciseCreator({ onClose, onCreated, onGoToBoard }) {
+export function ExerciseCreator({ onClose, onCreated }) {
+  const router = useRouter();
   const { user, loading } = useUser();
 
   const [saveLoading, setSaveLoading] = useState(false);
@@ -81,6 +84,48 @@ export function ExerciseCreator({ onClose, onCreated, onGoToBoard }) {
       setSaveLoading(false);
     }
   };
+
+  const handleCreateAndGoToBoard = async () => {
+    setError("");
+
+    if (!name.trim() || !typeValue || !duration) {
+      setError("Rellena nombre, tipo y duración.");
+      return;
+    }
+
+    try {
+      setSaveLoading(true);
+
+      const durationNum = Number(duration);
+      const playersNum = players === "" ? null : Number(players);
+
+      const payload = {
+        name: name.trim(),
+        type: typeValue,
+        duration: isNaN(durationNum) ? null : durationNum,
+        players: isNaN(playersNum) ? null : playersNum,
+        court: courtValue || null,
+        description: description.trim() || null,
+        created_by: user?.id || null,
+      };
+
+      const { exerciseId, error } = await createExercise(payload);
+      if (error) throw error;
+
+      onClose?.(); // cierra bottomsheet
+
+      router.push({
+        pathname: "/pizarra",
+        params: { exerciseId },
+      });
+    } catch (e) {
+      console.error(e);
+      setError(e.message || "No se pudo crear el ejercicio");
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
@@ -143,10 +188,10 @@ export function ExerciseCreator({ onClose, onCreated, onGoToBoard }) {
 
       <Pressable
         style={localStyles.boardButton}
-        onPress={onGoToBoard}
+        onPress={handleCreateAndGoToBoard}
       >
         <Text style={localStyles.boardButtonText}>
-          ⛏ Enlazar con Pizarra Táctica
+          🖊️ Enlazar con Pizarra Táctica
         </Text>
       </Pressable>
 

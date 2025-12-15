@@ -1,5 +1,6 @@
 import Foundation from '@expo/vector-icons/Foundation';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
+import { Ionicons } from "@expo/vector-icons";
 
 export const BoardIcon = (props) => (
     <Foundation name="clipboard" size={24} color="black" {... props}/>
@@ -32,3 +33,6 @@ export const LockIcon = (props) => (
 export const CloseIcon = (props) => (
     <Foundation name="x" size={24} color="black" {... props}/>
 );
+export function TrashIcon({ size = 20, color = "#fff" }) {
+  return <Ionicons name="trash-outline" size={size} color={color} />;
+}

@@ -3,11 +3,20 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 import { LockIcon } from "../../components/icons";
 import { router, Stack } from "expo-router";
 import { supabase } from "../../lib/supabase";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Canvas, Path, Skia, Group, Circle } from "@shopify/react-native-skia";
+import { useCanvasRef, ImageFormat } from "@shopify/react-native-skia";
+import { saveExerciseBoardPng } from "../../lib/queries";
+import { useLocalSearchParams } from "expo-router";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
+
 
 export default function Pizarra() {
-  const insets = useSafeAreaInsets();
+  const canvasRef = useCanvasRef();
+  const params = useLocalSearchParams();
+  const exerciseId = Array.isArray(params.exerciseId)
+  ? params.exerciseId[0]
+  : params.exerciseId;
 
   // Tamaño del área de dibujo
   const [size, setSize] = useState({ w: 0, h: 0 });
@@ -542,6 +551,36 @@ export default function Pizarra() {
     router.replace("/login");
   };
 
+
+  // Guardar pizarra
+  const saveBoard = async () => {
+    try {
+      if (!canvasRef.current) return;
+      if (!exerciseId) {
+        alert("Este ejercicio no está vinculado");
+        return;
+      }
+      const image = canvasRef.current.makeImageSnapshot();
+      const base64 = image.encodeToBase64(ImageFormat.PNG, 100);
+      const { data, error } = await saveExerciseBoardPng({
+        exerciseId,
+        base64Png: base64,
+      });
+
+      if (error) throw error;
+      alert("✅ Pizarra guardada");
+      
+      // volver al ejercicio
+      router.replace(`/exercise/${exerciseId}`);
+    } catch (e) {
+      console.error(e);
+      alert("❌ Error guardando la pizarra");
+    }
+  };
+
+
+
+
   return (
     <>
       <Stack.Screen
@@ -615,6 +654,8 @@ export default function Pizarra() {
           />
 
           <ToolButton label="Clear" onPress={clearAll} />
+          <ToolButton label="Guardar" onPress={saveBoard} />
+
         </View>
 
         {/* Canvas (debajo) */}
@@ -627,7 +668,7 @@ export default function Pizarra() {
           pointerEvents="auto"
         >
           {size.w > 0 && size.h > 0 && (
-            <Canvas style={{ width: size.w, height: size.h }}>
+            <Canvas ref={canvasRef} style={{ width: size.w, height: size.h }}>
               {Court}
 
               {/* Trazo actual (dibujo libre) */}
