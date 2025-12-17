@@ -385,7 +385,7 @@ export async function createExercise(exercise) {
   .insert([{id: exerciseId, ...exercise}]);
   
   if (error) {
-    return {exerciseId: null, error};
+    return {data: null, error};
   }
   
   // Relacion en users_teams
@@ -394,10 +394,10 @@ export async function createExercise(exercise) {
     .insert([{ user_id: user.id, exercise_id: exerciseId }]);
 
   if (linkError) {
-    return { exerciseId, error: linkError};
+    return { data: null, error: linkError};
   }
 
-  return {exerciseId, error: null};
+  return {data: exerciseId, error: null};
 }
 
 export async function getUserExercises() {
@@ -434,6 +434,9 @@ export async function getUserExercises() {
 }
 
 export async function getExerciseById(exerciseId) {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) throw userError || new Error("Usuario no autenticado");
+
   const { data, error } = await supabase
     .from("exercises")
     .select("*")
@@ -444,6 +447,20 @@ export async function getExerciseById(exerciseId) {
   return { data, error: null };
 }
 
+export async function deleteExercise(exerciseId) {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) throw userError || new Error("Usuario no autenticado");
+
+  // Eliminamos la relacion en users_exercises (Supabase se encarga de eliminar el ejercicio si no hay entrenadores que lo tengan)
+  const { error } = await supabase
+    .from("users_exercises")
+    .delete()
+    .eq("exercise_id", exerciseId)
+    .eq("user_id", user.id);
+
+  if (error) return { error };
+  return { error: null };
+}
 
 export async function createTraining({training, exercises}) {
   const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -590,6 +607,21 @@ export async function updateTraining({training, exercises}) {
 
     if (insertError) return {error: insertError};
   }
+
+  return {error: null};
+}
+
+export async function deleteTraining(trainingId) {
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) throw userError || new Error("Usuario no autenticado");
+
+  const { error } = await supabase
+  .from("users_trainings")
+  .delete()
+  .eq("training_id", trainingId)
+  .eq("user_id", user.id);
+
+  if (error) return {error};
 
   return {error: null};
 }
@@ -766,7 +798,7 @@ export async function deleteExerciseBoardPng({ exerciseId }) {
 // Crea ejercicio y guarda la pizarra PNG asociada
 export async function createExerciseWithBoard({ exercisePayload, base64Png }) {
   // 1) crea ejercicio (tu función ya devuelve exerciseId en tu versión nueva)
-  const { exerciseId, error: createError } = await createExercise(exercisePayload);
+  const { data: exerciseId, error: createError } = await createExercise(exercisePayload);
   if (createError) return { data: null, error: createError };
 
   // 2) guarda PNG vinculado al ejercicio

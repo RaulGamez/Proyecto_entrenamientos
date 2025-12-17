@@ -1,12 +1,13 @@
 import React, { useMemo, useState, useCallback, useRef, useEffect } from "react";
-import { View, Text, TouchableOpacity, Modal, TextInput, ScrollView, Alert } from "react-native";
+import { View, Text, TouchableOpacity, Modal, TextInput, ScrollView, Alert, Pressable } from "react-native";
 import { Calendar } from "react-native-big-calendar";
+import { LockIcon } from "../components/icons";
 import dayjs from "dayjs";
 import "dayjs/locale/es";
 import { supabase } from "../lib/supabase";
 import { styles } from "./styles";
 import { getEvents, getTasks } from "../lib/queries.js"
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, router, Stack } from "expo-router";
 
 
 // Combina fecha y hora en un objeto Date
@@ -320,9 +321,38 @@ export function Main() {
     }
   };
 
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut({ scope: "global" });
+
+    if (error) {
+      console.error("Error al cerrar sesion: ", error.message);
+      throw error;
+    }
+
+    router.replace("/login");
+  };
+
   // ----------- UI -----------
   return (
     <View style={styles.container}>
+      <Stack.Screen
+        options={{
+          headerStyle: { backgroundColor: "#fff" },
+          headerTintColor: "#000",
+          headerTitle: "Inicio",
+          headerRight: () => (
+            <Pressable onPress={handleLogout}>
+              {({ pressed }) => (
+                <LockIcon
+                  color={pressed ? "#ff6600" : "#000"}
+                  style={{ opacity: pressed ? 0.6 : 1, marginRight: 20 }}
+                />
+              )}
+            </Pressable>
+          ),
+        }}
+      />
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Cabecera bienvenida */}
         <View style={styles.welcomeCard}>

@@ -109,7 +109,7 @@ export function ExerciseCreator({ onClose, onCreated }) {
         created_by: user?.id || null,
       };
 
-      const { exerciseId, error } = await createExercise(payload);
+      const { data: exerciseId, error } = await createExercise(payload);
       if (error) throw error;
 
       onClose?.(); // cierra bottomsheet

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { View, Text, Pressable, StyleSheet, Alert} from "react-native";
-import { LockIcon } from "../../components/icons";
 import { router, Stack } from "expo-router";
 import { supabase } from "../../lib/supabase";
 import { Canvas, Path, Skia, Group, Circle } from "@shopify/react-native-skia";
@@ -542,17 +541,6 @@ export default function Pizarra() {
     );
   };
 
-  const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut({ scope: "global" });
-
-    if (error) {
-      console.error("Error al cerrar sesion: ", error.message);
-      throw error;
-    }
-
-    router.replace("/login");
-  };
-
   
   const getBoardBase64Png = () => {
     if (!canvasRef.current) return null;
@@ -673,17 +661,7 @@ export default function Pizarra() {
         options={{
           headerStyle: { backgroundColor: "#fff" },
           headerTintColor: "#000",
-          headerTitle: "Inicio",
-          headerRight: () => (
-            <Pressable onPress={handleLogout}>
-              {({ pressed }) => (
-                <LockIcon
-                  color={pressed ? "#ff6600" : "#000"}
-                  style={{ opacity: pressed ? 0.6 : 1 }}
-                />
-              )}
-            </Pressable>
-          ),
+          headerTitle: "Pizarra",
         }}
       />
 

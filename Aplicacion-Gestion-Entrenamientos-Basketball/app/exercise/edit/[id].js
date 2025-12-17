@@ -14,6 +14,7 @@ import {
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { supabase } from "../../../lib/supabase";
 import { teamStyles as styles } from "../../../components/stylesTeams";
+import { getExerciseById } from "../../../lib/queries";
 
 const COURT_OPTIONS = [
   { value: "full", label: "Pista completa" },
@@ -50,11 +51,7 @@ export default function EditExercise() {
 
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase
-        .from("exercises")
-        .select("*")
-        .eq("id", id)
-        .single();
+      const { data, error } = await getExerciseById(id);
 
       if (error) {
         setError("No se pudo cargar el ejercicio");

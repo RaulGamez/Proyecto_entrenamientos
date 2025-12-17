@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { supabase } from "../../lib/supabase";
 import { teamStyles as styles } from "../../components/stylesTeams";
 import { CloseIcon } from "../../components/icons";
+import { deleteTraining } from "../../lib/queries";
 
 export default function TrainingDetail() {
   const router = useRouter();
@@ -68,7 +69,7 @@ export default function TrainingDetail() {
           style: "destructive",
           onPress: async () => {
             try {
-              await supabase.from("trainings").delete().eq("id", trainingId);
+              await deleteTraining(trainingId);
             } catch (e) {
               Alert.alert(
                 "Error",

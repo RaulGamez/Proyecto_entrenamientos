@@ -7,7 +7,7 @@ import { supabase } from "../../lib/supabase";
 import { teamStyles as styles } from "../../components/stylesTeams";
 import { CloseIcon } from "../../components/icons";
 import { TrashIcon } from "../../components/icons";
-import { deleteExerciseBoardPng } from "../../lib/queries";
+import { deleteExerciseBoardPng, getExerciseById, deleteExercise } from "../../lib/queries";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 
@@ -25,11 +25,7 @@ export default function ExerciseDetail() {
     if (!id) return;
     setLoading(true);
 
-    const { data, error } = await supabase
-      .from("exercises")
-      .select("*")
-      .eq("id", id)
-      .single();
+    const { data, error } = await getExerciseById(id);
 
     if (error) console.log("Error loading exercise", error);
 
@@ -62,7 +58,7 @@ export default function ExerciseDetail() {
           style: "destructive",
           onPress: async () => {
             try {
-              await supabase.from("exercises").delete().eq("id", id);
+              await deleteExercise(id);
             } catch (e) {
               Alert.alert(
                 "Error",
