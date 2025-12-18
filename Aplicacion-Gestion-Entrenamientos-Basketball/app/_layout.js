@@ -13,13 +13,13 @@ export default function Layout() {
     return (
         <GestureHandlerRootView>
             <SafeAreaProvider>
-                <View style={{flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom}}>
+                <View style={{flex: 1}}>
                     <StatusBar style="dark" />
                     <UserProvider>
                         <Stack
                         screenOptions={{
                             headerShown: false,
-                            headerStyle: { backgroundColor: "#fff" },
+                            headerStyle: { backgroundColor: "#fff"},
                             headerTintColor: "#000",
                         }}
                         />
