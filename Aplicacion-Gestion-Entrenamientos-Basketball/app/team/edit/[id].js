@@ -6,10 +6,13 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { supabase } from "../../../lib/supabase";
 import { teamStyles as styles } from "../../../components/stylesTeams";
 import { TrainingSchedulePicker } from "../../../components/TrainingSchedulePicker";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function EditTeam() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+
+  const insets = useSafeAreaInsets();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -119,7 +122,13 @@ export default function EditTeam() {
   );
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 16, gap: 10, backgroundColor: "#f6f7fb" }}>
+    <ScrollView contentContainerStyle={{
+        padding: 16,
+        paddingTop: insets.top,
+        paddingBottom: insets.bottom,
+        gap: 10,
+        backgroundColor: "#f6f7fb"
+      }}>
       <Stack.Screen
         options={{
           headerTitle: "Editar equipo",

@@ -7,10 +7,13 @@ import { teamStyles as styles } from "../../../components/stylesTeams";
 import { validatePlayerInfo } from "../../../lib/validators";
 import { deletePlayers } from "../../../lib/queries";
 import { CloseIcon } from "../../../components/icons";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function EditPlayer() {
   const { id } = useLocalSearchParams(); // playerId
   const router = useRouter();
+
+  const insets = useSafeAreaInsets();
 
   const [loading, setLoading] = useState(true);
   const [player, setPlayer] = useState(null);
@@ -124,7 +127,13 @@ export default function EditPlayer() {
   }
 
   return (
-    <ScrollView style={styles.screen}>
+    <ScrollView 
+    style={styles.screen}
+    contentContainerStyle={{
+      paddingTop: insets.top,
+      paddingBottom: insets.bottom,
+    }}
+    >
       {/* CABECERA OSCURA (igual que ExerciseDetail) */}
       <View
         style={{

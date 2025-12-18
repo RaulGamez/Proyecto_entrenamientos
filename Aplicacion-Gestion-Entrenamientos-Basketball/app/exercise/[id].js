@@ -10,10 +10,13 @@ import { TrashIcon } from "../../components/icons";
 import { deleteExerciseBoardPng, getExerciseById, deleteExercise } from "../../lib/queries";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function ExerciseDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
+
+  const insets = useSafeAreaInsets();
 
   const [exercise, setExercise] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -178,7 +181,12 @@ export default function ExerciseDetail() {
   const description = exercise.description || "";
 
   return (
-    <ScrollView style={styles.screen} 
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={{
+        paddingTop: insets.top,
+        paddingBottom: insets.bottom,
+      }}
       refreshControl={
       <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
     }>

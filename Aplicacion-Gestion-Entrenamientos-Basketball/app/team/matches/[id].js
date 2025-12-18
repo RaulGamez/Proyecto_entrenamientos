@@ -5,12 +5,16 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { supabase } from "../../../lib/supabase";
 import { teamStyles as styles } from "../../../components/stylesTeams";
 import { EventEmitter } from "expo-modules-core";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 
 export const events = new EventEmitter();
 
 export default function EditMatch() {
   const { id } = useLocalSearchParams(); // matchId
   const router = useRouter();
+
+  const insets = useSafeAreaInsets();
+
   const [loading, setLoading] = useState(true);
   const [match, setMatch] = useState(null);
 
@@ -83,7 +87,14 @@ export default function EditMatch() {
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={{ padding: 16 }}>
+    <ScrollView
+    style={styles.screen}
+    contentContainerStyle={{
+      padding: 16,
+      paddingTop: insets.top,
+      paddingBottom: insets.bottom,
+    }}
+    >
       <Text style={[styles.sectionTitle, { marginTop: 0 }]}>Editar partido</Text>
 
       <Label>Rival</Label>

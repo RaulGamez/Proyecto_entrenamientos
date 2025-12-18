@@ -10,11 +10,14 @@ import { EmptyPlayers } from "../../components/EmptyPlayers";
 import { CloseIcon } from "../../components/icons";
 import { getTeamById, getUserPlayers, getTeamPlayers, createPlayer, updateTeamPlayers, deleteTeam } from "../../lib/queries";
 import { PlayerCard } from "../../components/PlayerCard";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 
 
 export default function TeamDetail() {
   const {id} = useLocalSearchParams();
   const router = useRouter();
+
+  const insets = useSafeAreaInsets();
 
   const [team, setTeam] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -249,7 +252,13 @@ export default function TeamDetail() {
   };
 
   return (
-    <ScrollView style={styles.screen}>
+    <ScrollView
+    style={styles.screen}
+    contentContainerStyle={{
+      paddingTop: insets.top,
+      paddingBottom: insets.bottom,
+    }}
+    >
       {/*Player Picker*/}
       {showPlayerPicker &&
         <PlayerPicker

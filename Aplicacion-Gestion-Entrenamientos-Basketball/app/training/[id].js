@@ -6,9 +6,13 @@ import { supabase } from "../../lib/supabase";
 import { teamStyles as styles } from "../../components/stylesTeams";
 import { CloseIcon } from "../../components/icons";
 import { deleteTraining } from "../../lib/queries";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
+
 
 export default function TrainingDetail() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+
   const { id: trainingId } = useLocalSearchParams(); 
 
   const [training, setTraining] = useState(null);
@@ -154,7 +158,13 @@ export default function TrainingDetail() {
 
 
   return (
-    <ScrollView style={styles.screen}>
+    <ScrollView
+    style={styles.screen}
+    contentContainerStyle={{
+      paddingTop: insets.top,
+      paddingBottom: insets.bottom,
+    }}
+    >
       {/* Cabecera con imagen */}
       <View style={{ position: "relative" }}>
         <ImageBackground

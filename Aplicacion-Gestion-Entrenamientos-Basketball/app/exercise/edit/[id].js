@@ -15,6 +15,7 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { supabase } from "../../../lib/supabase";
 import { teamStyles as styles } from "../../../components/stylesTeams";
 import { getExerciseById } from "../../../lib/queries";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 
 const COURT_OPTIONS = [
   { value: "full", label: "Pista completa" },
@@ -35,6 +36,8 @@ const TYPE_OPTIONS = [
 export default function EditExercise() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+
+  const insets = useSafeAreaInsets();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -140,6 +143,8 @@ export default function EditExercise() {
     <ScrollView
       contentContainerStyle={{
         padding: 16,
+        paddingTop: insets.top,
+        paddingBottom: insets.bottom,
         gap: 10,
         backgroundColor: "#f6f7fb",
       }}

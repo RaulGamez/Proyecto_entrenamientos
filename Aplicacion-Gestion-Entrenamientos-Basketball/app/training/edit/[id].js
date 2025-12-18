@@ -6,6 +6,7 @@ import { supabase } from "../../../lib/supabase";
 import { teamStyles as styles } from "../../../components/stylesTeams";
 import { updateTraining, getUserExercises } from "../../../lib/queries";
 import { ExerciseCreator } from "../../../components/ExerciseCreator";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 
 const COURT_OPTIONS = [
   { value: "full", label: "Pista completa" },
@@ -16,6 +17,8 @@ const COURT_OPTIONS = [
 export default function EditTraining() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+
+  const insets = useSafeAreaInsets();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -468,6 +471,8 @@ export default function EditTraining() {
     <ScrollView
       contentContainerStyle={{
         padding: 16,
+        paddingTop: insets.top,
+        paddingBottom: insets.bottom,
         gap: 10,
         backgroundColor: "#f6f7fb",
       }}
